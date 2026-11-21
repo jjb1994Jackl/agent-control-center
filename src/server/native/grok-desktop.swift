@@ -6,6 +6,15 @@ func grokText(_ e: AXUIElement) -> String {
   return (shown.isEmpty ? name(e) : shown).trimmingCharacters(in: .whitespacesAndNewlines)
 }
 func grokParent(_ e: AXUIElement) -> AXUIElement? { attr(e, "AXParent") as! AXUIElement? }
+func grokWithinClass(_ e: AXUIElement, _ target: String) -> Bool {
+  var node: AXUIElement? = e
+  for _ in 0..<12 {
+    guard let current = node else { break }
+    if classes(current).contains(target) { return true }
+    node = grokParent(current)
+  }
+  return false
+}
 func grokSidebarRows() -> [(row: AXUIElement, title: String)] {
   guard let side = find("grokSidebar") else { return [] }
   return within(side, { role($0) == "AXButton" }).compactMap { row in
@@ -36,6 +45,21 @@ func grokOpen(_ title: String, activate: Bool) -> Bool {
 func grokOffline() -> Bool {
   let labels = Set(settings("offlineLabels"))
   return first { role($0) == "AXStaticText" && labels.contains(grokText($0)) } != nil
+}
+func grokChatPane(_ title: String) -> AXUIElement? {
+  guard grokChatDrawn(title), let history = find("grokHistory") else { return nil }
+  var node = grokParent(history)
+  for _ in 0..<6 {
+    guard let pane = node else { break }
+    if attr(pane, "AXSubrole") as? String == "AXLandmarkMain", name(pane) == title { return pane }
+    node = grokParent(pane)
+  }
+  return nil
+}
+func grokStopControl(_ title: String) -> AXUIElement? {
+  guard let pane = grokChatPane(title), !grokOffline() else { return nil }
+  let buttons = within(pane) { role($0) == "AXButton" && settings("stopButtons").contains(name($0)) && (attr($0,"AXEnabled") as? Bool ?? true) }
+  return buttons.count == 1 ? buttons.first : nil
 }
 func grokReadText(_ root: AXUIElement) -> String {
   let text = within(root) { role($0) == "AXStaticText" }.map(grokText).filter { !$0.isEmpty }
@@ -125,13 +149,29 @@ func grokOpenSettings() {
 switch args.first {
 case "list-chats":
   guard find("grokSidebar") != nil else { fail("no_sidebar", "Grok 的会话列表未打开") }
-  out(["ok": true, "chats": grokSidebarRows().map { $0.title }])
+  let chats = grokSidebarRows()
+  out(["ok": true, "chats": chats.map { $0.title }, "pinned": chats.filter { grokWithinClass($0.row, "sand-pinned-grid") }.map { $0.title }])
 case "grok-chat-read", "grok-chat-peek":
   let title = stdinText()
   guard grokOpen(title, activate: args.first == "grok-chat-read") else {
     fail("wrong_chat", "无法确认所选 Grok 会话，请刷新会话列表")
   }
-  out(["ok": true, "messages": grokChatMessages(), "offline": grokOffline()])
+  let canStop = grokStopControl(title) != nil
+  let working = grokChatPane(title).map { pane in within(pane) { role($0) == "AXStaticText" && settings("workingLabels").contains(grokText($0).lowercased()) }.first != nil } ?? false
+  out(["ok": true, "messages": grokChatMessages(), "offline": grokOffline(), "running": canStop || working, "canStop": canStop])
+case "grok-chat-stop":
+  struct GrokStopInput: Decodable { let title: String; let prompt: String }
+  guard let data = stdinText().data(using: .utf8), let input = try? JSONDecoder().decode(GrokStopInput.self, from: data),
+        grokOpen(input.title, activate: false), let stop = grokStopControl(input.title) else {
+    fail("no_stop", "没有找到当前 Grok 会话可确认的停止按钮")
+  }
+  func words(_ text: String) -> String { text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ") }
+  let prompt = grokChatMessages().last { $0["user"] as? Bool == true }?["text"] as? String
+  guard let prompt, !input.prompt.isEmpty, words(prompt) == words(input.prompt), grokChatDrawn(input.title) else {
+    fail("changed_turn", "当前执行轮次已变化，请刷新后再停止")
+  }
+  guard act(stop, kAXPressAction as String) == .success else { fail("not_stopped", "Grok 没有确认收到停止请求") }
+  out(["ok": true, "pending": true])
 case "grok-chat-send":
   struct GrokSendInput: Decodable { let title: String; let prompt: String }
   guard let raw = stdinText().data(using: .utf8), let input = try? JSONDecoder().decode(GrokSendInput.self, from: raw),

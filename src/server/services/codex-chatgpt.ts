@@ -6,6 +6,12 @@ import { bag, get, list, parseJson } from '../../shared/guards.js';
 export interface ChatgptProject { id: string; name: string; cwd: string }
 // A type alias (not an interface), so it is readable as a ChatMode chat (which allows more fields).
 export type ChatgptConversation = { id: string; title: string; updatedAt: string; local: boolean };
+export function codexPinnedThreads(value: unknown): string[] {
+  const raw = bag(value) || {};
+  const owner = Object.entries(raw).filter(([key, atoms]) => key.startsWith('electron-owner-atoms') && Array.isArray(get(atoms,'app-server-pinned-thread-order-v1')));
+  const current = owner.length === 1 ? get(owner[0]?.[1], 'app-server-pinned-thread-order-v1') : undefined;
+  return [...new Set(list(current ?? raw['pinned-thread-ids']).filter((id): id is string => typeof id === 'string' && !!id))];
+}
 
 // The Codex desktop app's "ChatGPT" mode, as its sidebar shows it, read-only from the app's own
 // files under ~/.codex:
@@ -17,11 +23,11 @@ export type ChatgptConversation = { id: string; title: string; updatedAt: string
 //                                           mode lists both in (unified-sidebar-project-order-v1)
 // Only those keys are read. The ChatGPT conversations' messages are not on disk in readable form.
 class CodexChatgpt {
-  db: string; stateFile: string; state: { stamp: string; value: { projects: ChatgptProject[] } };
+  db: string; stateFile: string; state: { stamp: string; value: { projects: ChatgptProject[]; pins: string[] } };
   constructor({ codexHome }: { codexHome: string }) {
     this.db = path.join(codexHome, 'sqlite', 'codex.db');
     this.stateFile = path.join(codexHome, '.codex-global-state.json');
-    this.state = { stamp: '', value: { projects: [] } };
+    this.state = { stamp: '', value: { projects: [], pins: [] } };
   }
   // (A read that fails, while the desktop is writing the file, answers what the last one read:
   // the chats have not gone anywhere.)
@@ -48,15 +54,15 @@ class CodexChatgpt {
       // like "network", only once, as the ChatGPT project); without it, every project.
       const keys = order.length ? order.filter((key): key is string => typeof key === 'string' && all.has(key)) : [...all.keys()];
       const projects = keys.flatMap(key => { const project = all.get(key); return project ? [{ id: key, ...project }] : []; }).filter(project => project.name);
-      this.state = { stamp, value: { projects } };
+      this.state = { stamp, value: { projects, pins: codexPinnedThreads(raw) } };
       return projects;
     } catch { return this.state.value.projects; }
   }
   // { conversations: [{ id, title, updatedAt, local }] newest first, projects: [{ id, name, cwd }] }
-  read(): { conversations: ChatgptConversation[]; projects: ChatgptProject[] } {
+  read(): { conversations: ChatgptConversation[]; projects: ChatgptProject[]; pins: string[] } {
     const seconds = (value: unknown) => (typeof value === 'number' && value > 0 ? new Date(value * (value < 1e12 ? 1000 : 1)).toISOString() : '');
     const conversations = this.catalog().map(row => ({ id: String(row.thread_id), title: String(row.display_title || ''), updatedAt: seconds(row.source_recency_at) || seconds(row.source_updated_at), local: row.host_id === 'local' }));
-    return { conversations, projects: this.projects() };
+    return { conversations, projects: this.projects(), pins: this.state.value.pins };
   }
 }
 

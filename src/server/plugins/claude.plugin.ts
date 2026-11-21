@@ -98,7 +98,7 @@ export const setup: PluginSetup = ({ config = {}, registerEngine, registerAsset 
   const mode = new ChatMode({ automation: bridge.desktop, space: 'chat', label: 'Claude 桌面版', list: () => chatSessions().chats, idFrom: /\/chat\/([0-9a-f-]{36})/, waitSeconds: 0, pollMs: 3000, watchVisible: true });
   const isChat = (id: string | null) => mode.has(id);
   const asSession = (chat: ModeChat, projects: readonly ClaudeChatProject[]) => new UnifiedSession({ id: chat.id, engine: 'claude', title: chat.title, updatedAt: chat.updatedAt, sendBlocked: ELSEWHERE,
-    metadata: { space: 'chat', contentUnavailable: ELSEWHERE, group: chat.projectId ? { id: chat.projectId, name: text(projects.find(project => project.id === chat.projectId)?.name || chat['projectName'] || '') } : null } });
+    metadata: { space: 'chat', contentUnavailable: ELSEWHERE, ...(chat['starred'] === true ? { nativePin: 0 } : {}), group: chat.projectId ? { id: chat.projectId, name: text(projects.find(project => project.id === chat.projectId)?.name || chat['projectName'] || '') } : null } });
   // Not while it is answering, and only what the mode takes (no attachments, its own settings).
   const chatOnly = 'Claude 模式的聊天在回复时不能插话，消息已排队，等这条回复结束再发';
   let sprite: Clawd | null | undefined;

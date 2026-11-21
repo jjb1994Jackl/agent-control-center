@@ -13,6 +13,20 @@ import { get } from '../src/shared/guards.js';
 const storage = () => { const data = new Map<string, string>(); return { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: unknown) => data.set(key, String(value)) }; };
 const session = (id: string, extra: object = {}) => ({ id, title: id, updatedAt: '2026-01-01T00:00:00Z', cwd: '', metadata: {}, ...extra });
 
+test('sidebar shows native pins in original order, then browser pins without repeating them in Recents', async () => {
+  const { renderSidebar, SidebarPrefs } = await import('../src/client/js/sidebar.js');
+  const saved = storage(), prefs = new SidebarPrefs(saved);
+  prefs.togglePin('codex','local');
+  const items = [session('recent'),session('native-two',{metadata:{nativePin:1}}),session('local'),session('native-one',{metadata:{nativePin:0}})];
+  const rendered = renderSidebar(items,{engineId:'codex',prefs:new SidebarPrefs(saved),status:item=>item.id==='recent'?{waiting:true}: {}});
+  assert.ok(rendered.indexOf('data-session="native-one"') < rendered.indexOf('data-session="native-two"'));
+  assert.ok(rendered.indexOf('data-session="native-two"') < rendered.indexOf('data-session="local"'));
+  assert.ok(rendered.indexOf('data-session="local"') < rendered.indexOf('data-side-section="recents"'));
+  assert.equal(rendered.match(/data-session="local"/g)?.length,1);
+  assert.match(rendered,/is-waiting/);
+  assert.doesNotMatch(renderSidebar([session('local')],{engineId:'grok',prefs:new SidebarPrefs(saved)}),/data-side-section="pinned"/);
+});
+
 test('sidebar puts sessions under their project, projectless ones under chats, children under parents', async () => {
   const { organize, projectChoices, repoKey } = await import('../src/client/js/sidebar.js');
   const sessions = [

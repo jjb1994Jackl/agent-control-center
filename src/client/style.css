@@ -1830,6 +1830,9 @@ body { flex-direction: row; background: var(--desk); }
 .side-project-tag { flex: 0 1 auto; max-width: 40%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 11px; font-weight: 400; color: var(--faint); }
 .side-dot { width: 7px; height: 7px; margin: 0 3px; border-radius: 50%; flex: none; }
 .side-dot.is-attention { background: var(--side-attention); }
+.side-dot.is-waiting { background: var(--warning); border-radius: 1px; transform: rotate(45deg); }
+.side-pin { display: inline-flex; flex: none; color: var(--muted); }
+.side-pin .lucide, svg.side-pin { width: 13px; height: 13px; }
 .side-dot.is-running { width: 11px; height: 11px; margin: 0 1px; border: 1.5px solid color-mix(in srgb, var(--side-attention) 25%, transparent); border-top-color: var(--side-attention); animation: activity-spin 900ms linear infinite; }
 .side-more { display: block; height: 28px; padding: 0 8px; font-size: 12.5px; color: var(--faint); border-radius: 8px; }
 .side-more:hover { color: var(--text); }
@@ -1844,6 +1847,8 @@ body { flex-direction: row; background: var(--desk); }
 .cwd:empty { display: none; }
 .chat-header .icon-button { width: 32px; height: 32px; }
 .chat-header .lucide { width: 17px; height: 17px; }
+.chat-header #stop:not([hidden]) { color: var(--negative); border: 1px solid currentColor; }
+.chat-header #pause-queue[aria-pressed='true'], .chat-header #pin-chat[aria-pressed='true'] { background: var(--surface); color: var(--text); }
 .chat-header #toggle-panel[aria-expanded="true"] { background: var(--surface); color: var(--text); }
 .header-tools { flex: none; display: flex; gap: 2px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--rule); }
 /* "Open in <app>": takes the person to this chat in the agent's desktop app. */

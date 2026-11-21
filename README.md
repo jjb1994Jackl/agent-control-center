@@ -14,6 +14,8 @@ A local macOS workbench for sending tasks to your existing desktop agents and re
 
 The **Overview** shows dispatches, progress, and usage for enabled agents. Open **Workbench**, choose an agent and an existing chat, and send a message. Each independent run sent from the workbench appears in the overview. In-turn notes and approvals don't create new records, and messages sent from the original apps are not imported. Select Grok's main Bot or a group directly in the workbench; no Routine is required. See [operations and troubleshooting](docs/macos.md).
 
+The sidebar distinguishes native pins from browser-only pins. **Stop current task** uses the agent's own stop control; **Pause queue** only holds unsent workbench messages for that chat. A native stop control did not appear during the live Grok Bot test, so hard stop for Grok is not verified.
+
 ## Troubleshoot or contribute
 
 Run `./doctor.sh` from the source directory, or open **Agent Control Center Preview** from `~/Applications` to launch the installed workbench. The [operations guide](docs/macos.md) also covers upgrades and uninstalling after you delete the source directory.

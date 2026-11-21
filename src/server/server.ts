@@ -307,7 +307,7 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
       if (twin) { run.nativeTurnId = twin.id; run.userPrompt = twin.userPrompt; run.userImages = twin.userImages; }
       history.turns = history.turns.filter(turn => turn !== twin);
     }
-    res.json({ ...history, activeTurn: active?.run || null, queued: runs.queued(engine, id), cursor: hub.cursor(engine, id) });
+    res.json({ ...history, activeTurn: active?.run || null, queued: runs.queued(engine, id), queuePaused: runs.queuePaused(engine,id), cursor: hub.cursor(engine, id) });
   });
   // The request's message, checked field by field (the body is whatever the page sent).
   const validateInput = (body: unknown = {}): SendInput & CreateInput => {
@@ -406,6 +406,11 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
     tasks.book.queuedAction(req.params.engine, req.params.id, String(req.params.itemId), true);
     res.json(result);
   });
+  app.put('/api/sessions/:engine/:id/queue/pause', (req,res) => {
+    const paused = get(req.body,'paused');
+    if (typeof paused !== 'boolean') return res.status(400).json({ error: 'Invalid pause state' });
+    return res.json(runs.pauseQueue(req.params.engine,req.params.id,paused));
+  });
   app.delete('/api/sessions/:engine/:id/queue/:itemId', (req, res) => {
     const result = runs.dequeue(req.params.engine, req.params.id, String(req.params.itemId));
     tasks.book.queuedAction(req.params.engine, req.params.id, String(req.params.itemId), false);
@@ -473,7 +478,8 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
     res.set('Cache-Control', 'no-store').json({ ...reference, ...(attachment ? { attachment } : {}) });
   });
   app.post('/api/sessions/:engine/:id/interrupt', async (req, res) => {
-    const result = await runs.interrupt(req.params.engine, req.params.id); res.json({ status: get(result, 'pending') ? 'stopping' : 'interrupted' });
+    const result = await runs.interrupt(req.params.engine, req.params.id, str(get(req.body,'turnId')) || undefined);
+    res.json({ status: get(result, 'pending') ? 'stopping' : 'interrupted', queuePaused: runs.queuePaused(req.params.engine, req.params.id) });
   });
   // The desktop's own buttons on the session's wrap-up card (commit, open a PR…): read from the
   // desktop app (their names are its own, not in the record), then one pressed there by its place

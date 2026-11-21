@@ -49,6 +49,9 @@
       <span id="engine-label" class="sr-only"></span><span id="session-sync" class="session-sync" role="status"></span>
       <button class="desktop-button" id="show-desktop" aria-label="在桌面端打开这个会话" title="在桌面端打开这个会话" hidden><i data-lucide="app-window"></i><span id="show-desktop-label"></span><i data-lucide="arrow-up-right"></i></button>
       <span class="header-tools">
+        <button type="button" class="icon-button" id="pin-chat" hidden aria-label="仅在工作台置顶" title="仅在工作台置顶"><i data-lucide="pin"></i></button>
+        <button type="button" class="icon-button" id="pause-queue" hidden aria-label="暂停后续排队" title="暂停后续排队"><i data-lucide="pause"></i></button>
+        <button type="button" class="icon-button" id="stop" hidden aria-label="停止当前任务" title="停止当前任务"><i data-lucide="square"></i></button>
         <button class="icon-button" id="session-info" aria-label="查看会话信息" title="查看会话信息"><i data-lucide="info"></i></button>
         <button class="icon-button" id="toggle-panel" aria-label="打开侧边栏" aria-expanded="false" aria-controls="side-panel" title="侧边栏（⌘ \\）"><i data-lucide="panel-right"></i></button>
       </span>
@@ -76,7 +79,6 @@
           </div>
           <button type="submit" class="send-button" id="send" aria-label="发送消息" disabled><i data-lucide="arrow-up"></i></button>
           <button type="button" class="queue-button" id="queue" aria-label="排队，这一轮结束后发送" title="排队：这一轮结束后发送（Tab）" hidden><i data-lucide="list-plus"></i></button>
-          <button type="button" class="send-button" id="stop" aria-label="停止任务" hidden><i data-lucide="square"></i></button>
         </div>
       </form>
       <div class="new-target-row" id="new-target-row" hidden>

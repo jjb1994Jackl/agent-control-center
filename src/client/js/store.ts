@@ -31,7 +31,7 @@ export interface PageTurn {
   timeline: TimelineEntry[];
 }
 /** A full read of the conversation (GET /api/sessions/…, or a session.snapshot event). */
-export interface Snapshot { session?: UnifiedSession | null; turns?: PresentedTurn[]; activeTurn?: RunTurn | null; queued?: QueuedMessage[]; cursor?: string }
+export interface Snapshot { session?: UnifiedSession | null; turns?: PresentedTurn[]; activeTurn?: RunTurn | null; queued?: QueuedMessage[]; queuePaused?: boolean; cursor?: string }
 
 export function upsert<T extends { id: unknown }>(list: T[], value: T): void {
   const index = list.findIndex(item => item.id === value.id);
@@ -51,17 +51,19 @@ export class ConversationStore {
   /** The last event's id; null when the stream's first frame said so (no event yet). */
   turns: PageTurn[] = []; cursor: string | null = ''; seen = new Set<string>(); handlers: Handlers = {};
   queue?: QueuedMessage[];
+  queuePaused = false;
   /** Bumped by the page when it restores a run, so a cached view knows to redraw. */
   revision?: number;
   register<K extends BridgeEventType>(type: K, handler: Handler<K>): void { Object.assign(this.handlers, { [type]: handler }); }
   load(history: SessionHistoryResponse): void {
     this.turns = (history.turns || []).map(turn => ({ ...emptyTurn(turn.id), ...turn }));
-    this.cursor = history.cursor || ''; this.seen.clear(); this.queue = history.queued || [];
+    this.cursor = history.cursor || ''; this.seen.clear(); this.queue = history.queued || []; this.queuePaused = !!history.queuePaused;
     if (history.activeTurn) this.restore(history.activeTurn);
   }
   restore(turn: RunTurn): void { upsert(this.turns, { ...emptyTurn(turn.id), ...structuredClone(turn), source: 'console' }); }
   reconcile(snapshot: Snapshot): void {
     if (Array.isArray(snapshot.queued)) this.queue = snapshot.queued;
+    if (typeof snapshot.queuePaused === 'boolean') this.queuePaused = snapshot.queuePaused;
     // A full read says which run the server still follows. A console turn it no longer has
     // (the run ended while we were away, or the server restarted) stops being protected:
     // the native history decides, and if it has nothing yet the turn is marked unconfirmed.

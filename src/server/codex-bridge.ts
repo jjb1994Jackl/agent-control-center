@@ -835,15 +835,16 @@ class CodexBridge extends EventEmitter {
 
   // Stops the turn in the desktop (its own Stop); a message still waiting in the queue is taken
   // back instead. The record then says how the turn ended.
-  async interruptTurn(threadId: string, emitter?: EngineEmitter | null): Promise<{ pending?: boolean }> {
+  async interruptTurn(threadId: string, emitter?: EngineEmitter | null, expectedNativeTurn?: string): Promise<{ pending?: boolean }> {
     const queuedId = get(emitter, 'queuedId');
     if (queuedId && !emitter?.turnId) {
       await this.send('thread/queue/delete', { threadId, queuedSubmissionId: queuedId });
       emitter?.emit('interrupt');
       return {};
     }
-    if (!emitter?.turnId) throw new Error('桌面版还没开始这一轮，请稍后重试或在桌面端停止');
-    try { await this.desktop.interrupt({ threadId, turnId: emitter.turnId }); }
+    const turnId = emitter?.turnId || expectedNativeTurn;
+    if (!turnId) throw new Error('桌面版还没开始这一轮，请稍后重试或在桌面端停止');
+    try { await this.desktop.interrupt({ threadId, turnId }); }
     catch (err) { throw Object.assign(new Error(`没能让 Codex 桌面版停下（${messageOf(err)}），请在桌面端停止`), { status: 409 }); }
     return { pending: true };
   }

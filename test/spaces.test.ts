@@ -1,7 +1,7 @@
 import { test, type TestContext } from 'node:test';
 import { readValue } from '../src/server/services/chromium-idb.js';
 import { ClaudeChats } from '../src/server/services/claude-chats.js';
-import { CodexChatgpt } from '../src/server/services/codex-chatgpt.js';
+import { CodexChatgpt, codexPinnedThreads } from '../src/server/services/codex-chatgpt.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -82,7 +82,11 @@ test("Codex's ChatGPT mode: Recents from the desktop's catalog, projects in its 
   assert.deepEqual(conversations.map(item => [item.id, item.local]), [['t-local', true], ['c-1', false]]);
   assert.equal(at(conversations, 1).updatedAt, new Date(200 * 1000).toISOString());
   assert.deepEqual(projects, [{ id: 'chatgpt:project:g-p-net', name: 'network', cwd: '' }, { id: 'codex:project:L1', name: 'coding', cwd: '/w/coding' }, { id: 'chatgpt:project:g-p-jp', name: '日语教学', cwd: '' }]);
-  assert.deepEqual(new CodexChatgpt({ codexHome: tmp(t) }).read(), { conversations: [], projects: [] });
+  assert.deepEqual(new CodexChatgpt({ codexHome: tmp(t) }).read(), { conversations: [], projects: [], pins: [] });
+});
+test('Codex pin order prefers the single native owner and respects a deliberately empty pinned list', () => {
+  assert.deepEqual(codexPinnedThreads({'electron-owner-atoms:test':{'app-server-pinned-thread-order-v1':['b','a','b']},'pinned-thread-ids':['old']}),['b','a']);
+  assert.deepEqual(codexPinnedThreads({'electron-owner-atoms:test':{'app-server-pinned-thread-order-v1':[]},'pinned-thread-ids':['old']}),[]);
 });
 
 test('a session can be in several modes, placed and ordered as each mode shows it', async () => {

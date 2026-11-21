@@ -33,7 +33,7 @@ export const setup: PluginSetup = ({ config, registerEngine, registerAsset }) =>
   // The desktop's "ChatGPT" mode: its Recents and projects, from the app's own files.
   const chatgpt = new CodexChatgpt({ codexHome: config.codexHome || process.env.CODEX_HOME || path.join(os.homedir(), '.codex') });
   const ELSEWHERE = 'ChatGPT 对话的正文不在本机，要从 Codex 桌面版的界面读';
-  const mode = (): { conversations: ChatgptConversation[]; projects: ChatgptProject[] } => { try { return chatgpt.read(); } catch { return { conversations: [], projects: [] }; } };
+  const mode = (): { conversations: ChatgptConversation[]; projects: ChatgptProject[]; pins: string[] } => { try { return chatgpt.read(); } catch { return { conversations: [], projects: [], pins: [] }; } };
   // Its conversations are read, started and answered in the desktop's own window (src/server/services/desktop-chat.ts).
   // Its sidebar's Recents list the Codex threads too, so a title they share is not driven (sharedTitle).
   const chats = new ChatMode({ automation: bridge.ui, space: 'chatgpt', label: 'Codex 桌面版', list: () => mode().conversations.filter(item => !item.local), sidebar: () => mode().conversations });
@@ -44,7 +44,7 @@ export const setup: PluginSetup = ({ config, registerEngine, registerAsset }) =>
   // Both modes order them as the desktop's Recents does (its catalog's recency), not by the thread's
   // own update time, so the console's "最近" matches the desktop's.
   const listAll = async () => {
-    const [threads, { conversations }] = [await bridge.listThreads(), mode()];
+    const [threads, { conversations, pins }] = [await bridge.listThreads(), mode()];
     const rank = new Map(conversations.map((item, index) => [item.id, index]));
     const recency = new Map(conversations.map(item => [item.id, Date.parse(item.updatedAt) || 0]));
     // (A thread the catalog does not list yet keeps its own time, so a new one still comes first.)
@@ -55,7 +55,10 @@ export const setup: PluginSetup = ({ config, registerEngine, registerAsset }) =>
         ? { ...thread.metadata, space: ['codex', 'chatgpt'], bySpace: { chatgpt: { group: null, rank: rank.get(thread.id) }, codex } }
         : { ...thread.metadata, bySpace: { ...thread.metadata?.bySpace, codex } };
     }
-    return [...threads, ...chats.chats().map(item => asSession(item, rank.get(chats.realOf(item.id)) ?? -1))];
+    const result = [...threads, ...chats.chats().map(item => asSession(item, rank.get(chats.realOf(item.id)) ?? -1))];
+    const pinned = new Map(pins.map((id, rank) => [id,rank]));
+    for (const thread of result) thread.metadata.nativePin = pinned.get(chats.realOf(thread.id)) ?? pinned.get(thread.id);
+    return result;
   };
   registerEngine({
     ...IDENTITY, prefix: 'CX', character: () => (loadSprite() ? CHARACTER : null),
@@ -68,7 +71,7 @@ export const setup: PluginSetup = ({ config, registerEngine, registerAsset }) =>
       { id: 'chatgpt', label: 'ChatGPT', capabilities: CHAT_CAPABILITIES },
       { id: 'codex', label: 'Codex', default: true },
     ],
-    capabilities: { attachments: true, cwd: true, models: true, reasoning: true, interrupt: true, approvals: true, steer: true, createRequiresPrompt: true,
+    capabilities: { attachments: true, cwd: true, models: true, reasoning: true, interrupt: true, desktopInterrupt: true, approvals: true, steer: true, createRequiresPrompt: true,
       // The New chat page's own model and effort, read from it: a new chat's menus start on them.
       newSettings: true, openFile: true, showInDesktop: true,
       // A new chat is made in the desktop's window, which on Windows takes the focus for a moment (uia-driver.cs); other messages go by its queue and IPC.
@@ -91,7 +94,7 @@ export const setup: PluginSetup = ({ config, registerEngine, registerAsset }) =>
     send: (id, input) => (remote(id) ? chats.send(id, input) : bridge.startTurn({ ...input, threadId: id })),
     openFile: (id, file) => bridge.openFile(id, file),
     show: id => (remote(id) ? chats.show(id) : bridge.show(id)),
-    interrupt: (id, emitter) => { if (remote(id)) throw Object.assign(new Error('ChatGPT 对话的回复请在 Codex 桌面版里停止'), { status: 501 }); return bridge.interruptTurn(id, emitter); },
+    interrupt: (id, emitter, expected) => { if (remote(id)) throw Object.assign(new Error('ChatGPT 对话的回复请在 Codex 桌面版里停止'), { status: 501 }); return bridge.interruptTurn(id, emitter, expected); },
     // The emitter the console passes is not needed: a steered message goes to the window that owns the thread.
     steer: (id, input) => { if (remote(id)) throw Object.assign(new Error('ChatGPT 对话在回复时不能插话，消息已排队，等这条回复结束再发'), { fallback: 'queue' }); return bridge.steerTurn(id, input); },
     // What the desktop waits on the person for (its question, a command, a file change) is a card

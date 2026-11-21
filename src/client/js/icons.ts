@@ -40,6 +40,10 @@ import PanelLeft from 'lucide/dist/esm/icons/panel-left.js';
 import PanelLeftClose from 'lucide/dist/esm/icons/panel-left-close.js';
 import PanelRight from 'lucide/dist/esm/icons/panel-right.js';
 import Pencil from 'lucide/dist/esm/icons/pencil.js';
+import Pause from 'lucide/dist/esm/icons/pause.js';
+import Play from 'lucide/dist/esm/icons/play.js';
+import Pin from 'lucide/dist/esm/icons/pin.js';
+import PinOff from 'lucide/dist/esm/icons/pin-off.js';
 import Plus from 'lucide/dist/esm/icons/plus.js';
 import RefreshCw from 'lucide/dist/esm/icons/refresh-cw.js';
 import ScanLine from 'lucide/dist/esm/icons/scan-line.js';
@@ -58,7 +62,7 @@ const drawn: Record<string, unknown> = {
   AppWindow, ArrowDown, ArrowUp, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronRight, ChevronsRight, CircleAlert, CircleStop, Code, Copy,
   Download, Ellipsis, ExternalLink, File, FileCheck2, FileText, Folder, FolderOpen, FolderSearch, GripVertical, Info, ListChecks, ListPlus,
   Mail, MessageSquareQuote, MessagesSquare, Mic, MonitorSmartphone, PanelLeft, PanelLeftClose, PanelRight, Pencil, Plus, RefreshCw, ScanLine, Search, Send,
-  Settings, Square, SquarePen, Terminal, TextCursorInput, Wrench, X,
+  Settings, Square, SquarePen, Terminal, TextCursorInput, Wrench, X, Pause, Play, Pin, PinOff,
 };
 const named = (name: string): string => name.replace(/(\w)(\w*)(_|-|\s*)/g, (_all, first: string, rest: string) => first.toUpperCase() + rest.toLowerCase());
 export const hasIcon = (name: string): boolean => named(name) in drawn;

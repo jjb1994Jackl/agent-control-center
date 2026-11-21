@@ -62,17 +62,18 @@ export function grokTurns(raw: unknown): UnifiedTurn[] {
 }
 
 export const setup: PluginSetup = ({ registerEngine }) => {
-  let catalog = new Map<string, { title: string; duplicate: boolean }>();
+  let catalog = new Map<string, { title: string; duplicate: boolean; pin?: number }>();
   const snapshots = new Map<string, History>();
-  const sessionOf = (id: string, title: string, sendBlocked = '') =>
-    new UnifiedSession({ id, engine: 'grok', title, updatedAt: 0, sendBlocked, metadata: { group: null } });
+  const sessionOf = (id: string, title: string, sendBlocked = '', running = false) =>
+    new UnifiedSession({ id, engine: 'grok', title, updatedAt: 0, sendBlocked, status: running ? 'busy' : 'idle', isDesktopActive: running, metadata: { group: null, nativePin: catalog.get(id)?.pin } });
   async function refreshCatalog() {
     const result = await grokDesktop.native(['list-chats']);
     if (!result.ok) throw fail(result.error || '暂时无法读取 Grok 会话');
     const counts = new Map<string, number>();
     for (const title of list(result['chats'])) if (typeof title === 'string' && title && title.length <= 500)
       counts.set(title, (counts.get(title) || 0) + 1);
-    catalog = new Map([...counts].map(([title, count]) => [hash(title), { title, duplicate: count > 1 }]));
+    const pins = new Map(list(result['pinned']).map((title,index) => [title,index]));
+    catalog = new Map([...counts].map(([title, count]) => [hash(title), { title, duplicate: count > 1, pin: pins.get(title) }]));
     for (const id of snapshots.keys()) if (!catalog.has(id)) snapshots.delete(id);
     return [...catalog].map(([id, { title, duplicate }]) => sessionOf(id, title, duplicate ? ambiguous : ''));
   }
@@ -85,7 +86,7 @@ export const setup: PluginSetup = ({ registerEngine }) => {
   registerEngine({
     ...identity,
     prefix: 'GB',
-    capabilities: { send: true, create: false, models: false, reasoning: false, permissions: false },
+    capabilities: { send: true, create: false, models: false, reasoning: false, permissions: false, interrupt: true, desktopInterrupt: true },
     look: { userTime: false, replyTime: 'none' },
     list: refreshCatalog,
     models: () => [],
@@ -106,11 +107,20 @@ export const setup: PluginSetup = ({ registerEngine }) => {
         if (!activate && previous) return previous;
         throw fail(result.error || '暂时无法读取 Grok 会话');
       }
-      const history = { session: sessionOf(id, title, result['offline'] === true ? offline : ''),
-        turns: grokTurns(result['messages']) };
+      const turns = grokTurns(result['messages']), running = result['running'] === true;
+      const turn = turns.at(-1);
+      if (running && turn?.id.startsWith('grok-msg-')) { turn.status = 'running'; turn.statusEvidence = 'desktop_page'; }
+      const history = { session: { ...sessionOf(id, title, result['offline'] === true ? offline : '', running), capabilities: { interrupt: result['canStop'] === true && turn?.status === 'running' } }, turns };
       snapshots.set(id, history);
       if (snapshots.size > 24) snapshots.delete(snapshots.keys().next().value!);
       return history;
+    },
+    interrupt: async (id, _emitter, expected) => {
+      const { title, duplicate } = await resolve(id), last = snapshots.get(id)?.turns?.at(-1);
+      if (duplicate || !expected || last?.id !== expected || last.status !== 'running') throw fail('当前执行轮次已变化，请刷新后再停止');
+      const stopped = await grokDesktop.native(['grok-chat-stop'], JSON.stringify({ title, prompt: last.userPrompt }));
+      if (!stopped.ok) throw fail(stopped.error || 'Grok 没有确认收到停止请求');
+      return { pending: true };
     },
     postMessage: async (id, input) => {
       const { title, duplicate } = await resolve(id);

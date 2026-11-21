@@ -117,6 +117,8 @@ const ELEMENTS = {
   'sidebar-resize': HTMLDivElement,
   'sidebar-scrim': HTMLButtonElement,
   'space-switch': HTMLDivElement,
+  'pin-chat': HTMLButtonElement,
+  'pause-queue': HTMLButtonElement,
   'stop': HTMLButtonElement,
   'timeline': HTMLDivElement,
   'toggle-panel': HTMLButtonElement,
@@ -420,7 +422,10 @@ function renderSessionList() {
   // desktop marks it for a look (metadata.attention) and it has not been opened here since.
   const status = (item: PageSession) => {
     const activity = activityFor(state.engine, item.id), flagged = !!item.metadata?.attention && markers.unread({ engine: state.engine, sessionId: item.id, completedAt: Date.parse(String(item.updatedAt)) || 0 });
-    return { running: activity ? activity.running : item.status === 'busy', unread: !!(activity && markers.unread(activity)) || flagged, draft: !!drafts.get(viewKey(state.engine, item.id)).text };
+    const active = item.id === state.session?.id ? state.store.active : undefined;
+    return { running: !!active || (activity ? activity.running : item.status === 'busy'), waiting: !!active?.approvals.length,
+      paused: item.id === state.session?.id && state.store.queuePaused,
+      unread: !!(activity && markers.unread(activity)) || flagged, draft: !!drafts.get(viewKey(state.engine, item.id)).text };
   };
   const renderDefault = () => renderSidebar(sessions, { projects, engineId: state.engine, space: shown, currentId: state.session?.id || '', query, status, time: item => relativeTime(item.updatedAt), prefs: sidePrefs, newChat: projectPlus() });
   const skinList = renderers.get(`session-list:${state.engine}`) || renderers.get('session-list:kit');
@@ -533,18 +538,46 @@ function renderEffort() {
   $('effort').innerHTML = efforts.map(effort => `<option value="${escape(effort)}">${escape(effort)}</option>`).join('');
   $('effort').value = efforts.includes(previous) ? previous : model?.defaultReasoningEffort || efforts[0] || '';
 }
+function currentStopTarget(): string | null {
+  if (!state.session) return null;
+  const active = state.store.active, caps = capsOf();
+  if (!caps.interrupt) return null;
+  if (active?.source === 'console') return active.id;
+  if (!caps.desktopInterrupt) return null;
+  const reported = state.session.metadata?.latestTurn;
+  if (reported?.status === 'running') return reported.id;
+  return active?.id || (state.session.status === 'busy' ? state.store.turns.at(-1)?.id || null : null);
+}
+function nativePinOfCurrent(): boolean {
+  const item = (state.sessions[state.engine] || []).find(candidate => candidate.id === state.session?.id);
+  return typeof (item ? item.metadata?.nativePin : state.session?.metadata?.nativePin) === 'number';
+}
+function headerAction(button: HTMLButtonElement, label: string, glyph: string, pressed?: boolean) {
+  button.title = label; button.setAttribute('aria-label', label);
+  if (pressed !== undefined) button.setAttribute('aria-pressed', String(pressed));
+  const before = button.dataset.html;
+  setHTML(button, icon(glyph));
+  if (before !== button.dataset.html) hydrateIcons(button);
+}
 function renderControls() {
   state.submitting = sending.has(currentKey()); state.uploading = uploads.get(currentKey()) || 0;
   const active = state.store.active;
   const caps = capsOf();
-  const desktopActive = caps.desktopInterrupt && (active || (!state.store.turns.length && state.session?.isDesktopActive));
-  const canStop = caps.interrupt && (active?.source === 'console' || desktopActive);
+  const desktopActive = state.session?.status === 'busy';
+  const canStop = !!currentStopTarget();
   const stopRequested = stopping.has(currentKey());
   // While a turn runs the composer stays usable: Enter adds the message to the running turn
   // (engines that can take it) or queues it for when the turn ends; Tab always queues.
   const typed = !!($('prompt').value.trim() || state.attachments.length);
-  $('send').hidden = !!canStop && !typed;
+  $('send').hidden = false;
   $('stop').hidden = !canStop;
+  const pinned = !!state.session && sidePrefs.isPinned(state.engine,state.session.id), nativePin = nativePinOfCurrent();
+  $('pin-chat').hidden = !state.session;
+  $('pin-chat').disabled = nativePin;
+  headerAction($('pin-chat'), nativePin ? t('原应用置顶') : pinned ? t('取消工作台置顶') : t('仅在工作台置顶'), pinned && !nativePin ? 'pin-off' : 'pin', nativePin || pinned);
+  $('pause-queue').hidden = !state.session || (!state.store.queue?.length && !state.store.queuePaused);
+  $('pause-queue').disabled = stopRequested;
+  headerAction($('pause-queue'), state.store.queuePaused ? t('继续发送队列') : t('暂停后续排队'), state.store.queuePaused ? 'play' : 'pause', state.store.queuePaused);
   $('queue').hidden = !active || !typed;
   $('queue').disabled = state.submitting || stopRequested || state.uploading > 0;
   const sendLabel = !active ? t('发送消息') : capsOf().steer ? t('插入正在执行的这一轮（Enter）') : t('排队，这一轮结束后发送（Enter）');
@@ -731,7 +764,7 @@ function renderQueue() {
   const desktop = held.map(item => `<div class="queue-item is-desktop"><span class="queue-label">${escape(engine()?.defaultLabel || engine()?.label || t('桌面版'))} ${t('排队中')}</span><span class="queue-text" title="${escape(item.prompt)}">${escape(item.prompt)}</span><button type="button" class="queue-now" data-send-now aria-label="${t('立即发送这条消息')}">${t('立即发送')}</button></div>`).join('');
   // Each waiting message can still join the running turn, go back to the composer, or be dropped.
   const canSteer = !!capsOf().steer && !!state.store.active;
-  const html = desktop + items.map(item => `<div class="queue-item"><span class="queue-label">${t('排队中')}</span><span class="queue-text" title="${escape(item.prompt)}">${escape(item.prompt.replace(/\s+/g, ' '))}${item.attachments ? ` · ${t('{n} 个附件', { n: item.attachments })}` : ''}</span>${canSteer ? `<button type="button" class="queue-now" data-queue-steer="${escape(item.id)}" title="${t('插入正在执行的这一轮')}">${t('插入')}</button>` : ''}<button type="button" class="icon-button" data-queue-edit="${escape(item.id)}" aria-label="${t('编辑这条排队消息')}" title="${t('编辑：放回输入框')}">${icon('pencil')}</button><button type="button" class="icon-button" data-dequeue="${escape(item.id)}" aria-label="${t('取消这条排队消息')}" title="${t('取消')}">${icon('x')}</button></div>`).join('');
+  const html = desktop + items.map(item => `<div class="queue-item"><span class="queue-label">${state.store.queuePaused ? t('队列已暂停') : t('排队中')}</span><span class="queue-text" title="${escape(item.prompt)}">${escape(item.prompt.replace(/\s+/g, ' '))}${item.attachments ? ` · ${t('{n} 个附件', { n: item.attachments })}` : ''}</span>${canSteer ? `<button type="button" class="queue-now" data-queue-steer="${escape(item.id)}" title="${t('插入正在执行的这一轮')}">${t('插入')}</button>` : ''}<button type="button" class="icon-button" data-queue-edit="${escape(item.id)}" aria-label="${t('编辑这条排队消息')}" title="${t('编辑：放回输入框')}">${icon('pencil')}</button><button type="button" class="icon-button" data-dequeue="${escape(item.id)}" aria-label="${t('取消这条排队消息')}" title="${t('取消')}">${icon('x')}</button></div>`).join('');
   if ($('queue-list').dataset.html !== html) { setHTML($('queue-list'), html); hydrateIcons($('queue-list')); }
 }
 function renderAttachments() {
@@ -772,7 +805,7 @@ function subscribe(view: number): void {
   const id = state.session?.id;
   if (id === undefined) return; // only called with a chat open
   state.stream = connect(state.engine, id, state.store.cursor, {
-    event(event) { if (view !== state.view || event.type === 'assistant.notice') return; if (event.type === 'queue.updated') { state.store.queue = event.data.items || []; renderControls(); return; } if (event.type === 'desktop.queue') { if (state.session) state.session = { ...state.session, metadata: { ...state.session.metadata, desktopQueue: queueItems(event.data.items || []) } }; renderControls(); return; } if (event.type === 'session.snapshot') { state.store.reconcile(event.data); state.session = { id, ...state.session, ...event.data.session, sendBlocked: event.data.session?.sendBlocked ?? state.session?.sendBlocked ?? '' }; state.store.cursor = event.id; renderHeader(); renderControls(); } else state.store.apply(event); state.store.revision = (state.store.revision || 0) + 1; scheduleRender(); if (['run.completed', 'run.failed', 'run.interrupted'].includes(event.type)) refresh().catch(() => {}); },
+    event(event) { if (view !== state.view || event.type === 'assistant.notice') return; if (event.type === 'queue.updated') { state.store.queue = event.data.items || []; state.store.queuePaused = !!event.data.paused; renderControls(); renderSessionList(); return; } if (event.type === 'desktop.queue') { if (state.session) state.session = { ...state.session, metadata: { ...state.session.metadata, desktopQueue: queueItems(event.data.items || []) } }; renderControls(); return; } if (event.type === 'session.snapshot') { state.store.reconcile(event.data); state.session = { id, ...state.session, ...event.data.session, sendBlocked: event.data.session?.sendBlocked ?? state.session?.sendBlocked ?? '' }; state.store.cursor = event.id; renderHeader(); renderControls(); } else state.store.apply(event); state.store.revision = (state.store.revision || 0) + 1; scheduleRender(); if (event.type.startsWith('approval.')) renderSessionList(); if (['run.completed', 'run.failed', 'run.interrupted'].includes(event.type)) refresh().catch(() => {}); },
     ready(data) { if (view !== state.view) return; if (data.activeTurn) { state.store.restore(data.activeTurn); state.store.revision = (state.store.revision || 0) + 1; } state.store.cursor = data.cursor; renderControls(); scheduleRender(); },
     reset() { if (view === state.view) { state.store.cursor = ''; selectSession(id, { force: true }); } },
     // (Through setHTML, so the line goes when the controls are next drawn: on reconnecting, or when the chat is left.)
@@ -1018,17 +1051,28 @@ function cancelDictation() {
   state.dictation = null; current.session.cancel(); renderControls();
 }
 async function stop() {
-  const session = state.session;
-  if (!session || $('stop').hidden || $('stop').disabled) return;
+  const session = state.session, turnId = currentStopTarget();
+  if (!session || !turnId || $('stop').hidden || $('stop').disabled) return;
   const owner = currentKey(), view = state.view;
   const native = state.store.active?.source !== 'console';
   stopping.add(owner); renderControls();
   try {
-    await request(`${endpoint()}/interrupt`, { method: 'POST' });
+    const result = await request<{status:string; queuePaused?:boolean}>(`${endpoint()}/interrupt`, { method: 'POST', body: JSON.stringify({turnId}) });
     if (native && view === state.view) await selectSession(session.id, { force: true, route: false });
+    if (currentKey() === owner && result.status === 'stopping' && currentStopTarget() === turnId) notify(t('停止请求已发送，等待原应用确认'));
   }
   catch (err) { if (view === state.view) notify(messageOf(err)); return; }
   finally { stopping.delete(owner); renderControls(); }
+}
+async function toggleQueuePause() {
+  if (!state.session || $('pause-queue').disabled) return;
+  const owner = currentKey(), paused = !state.store.queuePaused;
+  $('pause-queue').disabled = true;
+  try {
+    const result = await request<{paused:boolean}>(`${endpoint()}/queue/pause`, {method:'PUT',body:JSON.stringify({paused})});
+    if (currentKey() === owner) { state.store.queuePaused = result.paused; renderSessionList(); }
+  } catch (err) { if (currentKey() === owner) notify(messageOf(err)); }
+  finally { if (currentKey() === owner) renderControls(); }
 }
 // Files go up as soon as they are picked, into the draft of the chat they were picked in (the
 // person may have moved on before the upload ends). Uploads still on their way count towards
@@ -1145,6 +1189,8 @@ $('effort').addEventListener('change', () => { notePick('effort'); saveDraft(); 
 $('permission').addEventListener('change', () => notePick('permission'));
 $('composer').addEventListener('submit', sendMessage);
 $('stop').addEventListener('click', stop);
+$('pause-queue').addEventListener('click', toggleQueuePause);
+$('pin-chat').addEventListener('click', () => { if (!state.session || nativePinOfCurrent()) return; sidePrefs.togglePin(state.engine,state.session.id); renderSessionList(); renderControls(); });
 $('prompt').addEventListener('input', () => { $('prompt').style.height = 'auto'; $('prompt').style.height = `${Math.min(200, $('prompt').scrollHeight)}px`; saveDraft(); renderControls(); });
 $('prompt').addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); sendMessage(); }

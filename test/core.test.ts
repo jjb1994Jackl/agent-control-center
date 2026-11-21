@@ -42,12 +42,41 @@ test('only engines that opt in can stop a turn without a Frontdesk run', async (
   const host = new PluginHost(), hub = new EventHub(), calls: string[] = [];
   host.register(provider());
   host.register({ ...provider('desktop'), capabilities: { interrupt: true, desktopInterrupt: true },
-    interrupt: (id, emitter) => { assert.equal(emitter, undefined); calls.push(id); return { pending: true }; } });
+    read: id => ({ session: fake<UnifiedSession>({ id, status:'busy' }), turns:[fake<UnifiedTurn>({ id:'active-native',status:'running' })] }),
+    interrupt: (id, emitter, expected) => { assert.equal(emitter, undefined); assert.equal(expected,'active-native'); calls.push(id); return { pending: true }; } });
   const service = new RunService(host, hub);
   await assert.rejects(service.interrupt('fixture', 'session'), err => errorField(err, 'status') === 409);
-  assert.deepEqual(await service.interrupt('desktop', 'session'), { pending: true });
+  await assert.rejects(service.interrupt('desktop', 'session'), err => errorField(err,'status') === 409);
+  await assert.rejects(service.interrupt('desktop', 'session','previous-turn'), err => errorField(err,'status') === 409);
+  assert.deepEqual(await service.interrupt('desktop', 'session','active-native'), { pending: true });
   assert.deepEqual(calls, ['session']);
   assert.equal(service.active.size, 0);
+});
+test('stopping the selected turn holds its queue until explicitly resumed without touching another session', async () => {
+  const host = new PluginHost(), native = new Map<string, EngineEvents>();
+  host.register({ ...provider('fixture'), read: () => busyHistory('idle'),
+    send(id) { const events = new EngineEvents(); native.set(id,events); return events; },
+    interrupt(id, emitter) { assert.equal(emitter,native.get(id)); return {}; },
+  });
+  const service = new RunService(host,new EventHub());
+  const input = {prompt:'sample',attachments:[]};
+  const current = service.start('fixture','one',input);
+  service.start('fixture','two',input);
+  await tick();
+  service.enqueue('fixture','one',{...input,prompt:'next'});
+  await assert.rejects(service.interrupt('fixture','one','other-turn'),err=>errorField(err,'status')===409);
+  await service.interrupt('fixture','one',current.turnId);
+  assert.equal(service.queuePaused('fixture','one'),true);
+  assert.equal(service.queuePaused('fixture','two'),false);
+  assert.ok(service.get('fixture','two'));
+  await service.drain('fixture','one');
+  assert.equal(service.get('fixture','one'),undefined);
+  assert.equal(service.queued('fixture','one').length,1);
+  service.pauseQueue('fixture','one',false);
+  await tick();
+  assert.equal(service.get('fixture','one')?.run.userPrompt,'next');
+  assert.equal(service.queued('fixture','one').length,0);
+  service.dispose();
 });
 test('new engines work through registry without changing routes; duplicate registration fails', () => {
   const host = new PluginHost(); host.register(provider('fourth-engine'));

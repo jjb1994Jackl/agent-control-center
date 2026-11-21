@@ -26,6 +26,7 @@ const failure = (message: string, status: number) => Object.assign(new Error(mes
 class RunService {
   host: PluginHost; hub: EventHub; active: Map<string, RunRecord>; timeoutMs: number;
   queues: Map<string, QueueItem[]>; draining: Map<string, boolean>; pollMs: number;
+  private paused = new Set<string>();
   constructor(host: PluginHost, hub: EventHub, { timeoutMs = 30 * 60 * 1000 }: { timeoutMs?: number } = {}) {
     this.host = host; this.hub = hub; this.active = new Map(); this.timeoutMs = timeoutMs;
     // Messages waiting for the session's current turn to end, per session (kept in memory).
@@ -145,7 +146,16 @@ class RunService {
   queued(engineId: string, id: string): QueuedMessage[] {
     return (this.queues.get(this.hub.key(engineId, id)) || []).map(item => ({ id: item.id, prompt: item.input.prompt, attachments: item.input.attachments?.length || 0, at: item.at }));
   }
-  publishQueue(engineId: string, id: string): void { this.hub.publish(engineId, id, null, 'queue.updated', { items: this.queued(engineId, id) }); }
+  queuePaused(engine: string, id: string): boolean { return this.paused.has(this.hub.key(engine,id)); }
+  pauseQueue(engine: string, id: string, paused: boolean): { paused: boolean } {
+    const key = this.hub.key(engine,id);
+    if (paused && !this.queues.has(key)) return { paused: this.paused.has(key) };
+    if (paused) this.paused.add(key); else this.paused.delete(key);
+    this.publishQueue(engine,id);
+    if (!paused && this.queues.has(key)) void this.drain(engine,id);
+    return { paused };
+  }
+  publishQueue(engineId: string, id: string): void { this.hub.publish(engineId, id, null, 'queue.updated', { items: this.queued(engineId, id), paused: this.queuePaused(engineId,id) }); }
   enqueue(engineId: string, id: string, input: SendInput, dispatchId?: string): { status: string; id: string } {
     const key = this.hub.key(engineId, id), list = this.queues.get(key) || [];
     if (list.length >= 20) throw failure('排队的消息太多了', 429);
@@ -173,7 +183,7 @@ class RunService {
     if (this.draining.get(key)) return;
     this.draining.set(key, true);
     try {
-      while (this.queues.get(key)?.length && !this.active.has(key)) {
+      while (this.queues.get(key)?.length && !this.active.has(key) && !this.paused.has(key)) {
         let busy = false;
         try {
           const history = await this.host.get(engineId).read(id);
@@ -181,7 +191,7 @@ class RunService {
           const type = get(status, 'type') || status;
           busy = type === 'busy' || type === 'running' || history?.turns?.at(-1)?.status === 'running';
         } catch { busy = true; } // An unreadable desktop session is not known to be idle.
-        if (this.active.has(key)) break;
+        if (this.active.has(key) || this.paused.has(key)) break;
         if (busy) { await new Promise<void>(resolve => { setTimeout(resolve, this.pollMs).unref?.(); }); continue; }
         const item = this.queues.get(key)?.shift();
         if (!item) break;
@@ -195,13 +205,24 @@ class RunService {
       if (!this.queues.has(key) && !this.active.has(key)) this.hub.pinned.delete(key);
     }
   }
-  async interrupt(engineId: string, id: string): Promise<unknown> {
+  async interrupt(engineId: string, id: string, expected?: string): Promise<unknown> {
     const engine = this.host.get(engineId), record = this.get(engineId, id);
     if (!record && !engine.capabilities.desktopInterrupt) throw failure('没有正在执行的任务', 409);
     if (!engine.capabilities.interrupt || !engine.interrupt) throw failure('请在原桌面端停止此任务', 501);
+    const changed = () => failure('当前执行轮次已变化，请刷新后再停止', 409);
+    if (record && expected && ![record.run.id, record.run.nativeTurnId, record.emitter?.turnId].includes(expected)) throw changed();
+    if (!record) {
+      if (!expected) throw changed();
+      const history = await engine.read(id), reported = history.session?.metadata?.latestTurn;
+      const latest = reported?.status === 'running' ? reported : history.turns?.at(-1);
+      if (this.get(engineId,id) || history.session?.id !== id || history.session.capabilities?.interrupt === false ||
+        latest?.id !== expected || (latest.status !== 'running' && !(latest.status === 'unknown' && history.session.status === 'busy'))) throw changed();
+    }
+    // Stopping one turn must not immediately start the next message from the workbench queue.
+    if (this.queues.has(this.hub.key(engineId,id))) this.pauseQueue(engineId,id,true);
     // An engine that confirms the stop from its own records (the turn may have ended on its
     // own at that moment) returns { pending: true } and reports the final status itself.
-    const result = await engine.interrupt(id, record?.emitter);
+    const result = await engine.interrupt(id, record?.emitter, record ? undefined : expected);
     if (!get(result, 'pending')) record?.emit('run.interrupted', {});
     return result;
   }
@@ -225,6 +246,7 @@ class RunService {
   release(engineId: string): void {
     for (const [key, record] of [...this.active]) if (this.hub.owns(engineId, key)) { this.active.delete(key); this.drop(record); }
     for (const key of [...this.queues.keys()]) if (this.hub.owns(engineId, key)) this.queues.delete(key);
+    for (const key of this.paused) if (this.hub.owns(engineId,key)) this.paused.delete(key);
   }
   dispose(): void {
     for (const record of this.active.values()) this.drop(record);

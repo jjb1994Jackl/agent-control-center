@@ -136,6 +136,8 @@ export interface LatestTurn { id: string; status: TurnStatus | string; completed
 export interface SpacePlacement { group?: SessionGroup | null; rank?: number }
 
 export interface SessionMetadata {
+  /** Native pin order, only when the desktop explicitly marks this conversation as pinned. */
+  nativePin?: number;
   group?: SessionGroup | null;
   parentId?: string;
   attention?: string;
@@ -359,7 +361,7 @@ export interface EngineMethods {
   /** Posts to a native chat with its own reply lifecycle, not a console-owned run. */
   postMessage?(id: string, input: SendInput): Awaitable<{ status: 'sent' | 'uncertain'; reason?: string; observedTurnId?: string; sessionTitle?: string }>;
 
-  interrupt?(id: string, emitter?: EngineEmitter | null): Awaitable<{ pending?: boolean } | void | unknown>;
+  interrupt?(id: string, emitter?: EngineEmitter | null, expectedNativeTurn?: string): Awaitable<{ pending?: boolean } | void | unknown>;
   steer?(id: string, input: SendInput, emitter?: EngineEmitter | null): Awaitable<{ shown?: boolean } | void | unknown>;
   sendNow?(id: string): Awaitable<{ status: string }>;
   decide?(approvalId: string, decision: string): Awaitable<unknown>;
@@ -614,6 +616,7 @@ export interface SessionHistoryResponse {
   turns: PresentedTurn[];
   activeTurn: RunTurn | null;
   queued: QueuedMessage[];
+  queuePaused?: boolean;
   cursor: string;
 }
 
@@ -633,7 +636,7 @@ export interface BridgeEventMap {
   'run.failed': { message?: string; nativeTurnId?: string };
   'run.interrupted': { nativeTurnId?: string };
   'session.snapshot': { session?: UnifiedSession | null; turns: PresentedTurn[]; [extra: string]: unknown };
-  'queue.updated': { items: QueuedMessage[] };
+  'queue.updated': { items: QueuedMessage[]; paused?: boolean };
   'assistant.notice': { id: string; preview: string; phase?: string; at?: TimeValue };
   /** What the desktop holds for the running turn (its own queue), as read from its record. */
   'desktop.queue': { items: unknown[] };

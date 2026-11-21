@@ -38,7 +38,7 @@ export const setup: PluginSetup = ({ config, registerEngine }) => {
     ...IDENTITY, prefix: 'AG', character: CHARACTER,
     // How the Antigravity desktop writes a conversation (plugin-contract.md, "对话的样子").
     look: { worked: 'fold', ago: 'short', replyTime: 'before' },
-    capabilities: { dictation: true, attachments: true, models: true, interrupt: true, createRequiresPrompt: true, send: true, steer: true,
+    capabilities: { dictation: true, attachments: true, models: true, interrupt: true, desktopInterrupt: true, createRequiresPrompt: true, send: true, steer: true,
       // A new chat can start in a folder (the language server takes the workspace), and what the
       // agent waits on the person for (a permission, its own question) is answered from a card in the chat.
       // Its window is driven only to take the person to a chat, or to a file in one (Accessibility on
