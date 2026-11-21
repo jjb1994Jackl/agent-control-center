@@ -27,9 +27,8 @@ export function grokTurns(raw: unknown): UnifiedTurn[] {
   const occurrence = new Map<string, number>();
   const rows = list(raw).slice(-85);
   const anchor = (row: unknown) => {
-    const stamp = get(row, 'stamp'), author = get(row, 'author'), body = get(row, 'text');
-    return get(row, 'user') === true && typeof stamp === 'string' && stamp.trim() && typeof body === 'string' && typeof author === 'string'
-      ? 'grok-' + hash(author + '\0' + stamp.trim() + '\0' + promptKey(body)) : '';
+    const body = get(row, 'text');
+    return get(row, 'user') === true && typeof body === 'string' && promptKey(body) ? 'grok-msg-' + hash(promptKey(body)) : '';
   };
   const candidates = new Map<string, number>();
   for (const row of rows) {
@@ -47,8 +46,8 @@ export function grokTurns(raw: unknown): UnifiedTurn[] {
     const key = keyOf(author, body);
     if (get(row, 'user') === true) {
       const observed = anchor(row);
-      // A visible clock label + exact text can survive a viewport change. It cannot tell two
-      // identical messages at the same displayed time apart; such turns are display-only.
+      // The desktop can replace a provisional clock label or clip earlier rows. Only exact,
+      // unique self-message text can be used here; repeated messages remain display-only.
       turns.push(new UnifiedTurn({ id: candidates.get(observed) === 1 ? observed : key, userPrompt: body, status: 'unknown', timestamp: '' }));
     } else {
       let last = turns.at(-1);
@@ -123,7 +122,7 @@ export const setup: PluginSetup = ({ registerEngine }) => {
       if (result['delivery'] !== 'sent')
         return { status: 'uncertain', reason: '无法确认 Grok 是否收到消息，请核对会话，不要重复发送' };
       const seen = grokTurns(result['observed']).at(-1);
-      const observedTurnId = seen?.id.startsWith('grok-') && promptKey(seen.userPrompt) === promptKey(input.prompt) ? seen.id : undefined;
+      const observedTurnId = seen?.id.startsWith('grok-msg-') && promptKey(seen.userPrompt) === promptKey(input.prompt) ? seen.id : undefined;
       return { status: 'sent', observedTurnId, sessionTitle: title };
     },
     send: () => {

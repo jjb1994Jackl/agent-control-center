@@ -94,12 +94,6 @@ export class TaskBook {
       .run(sessionTitle.trim().slice(0,240), digest(promptKey(prompt)), id);
   }
   link(id: string, { session, sessionTitle, nativeTurn, queueItem, sentAt }: { session?: string; sessionTitle?: string; nativeTurn?: string; queueItem?: string; sentAt?: string }) {
-    if (nativeTurn?.startsWith('grok-')) {
-      const task = this.get(id);
-      const other = task && this.db.prepare("SELECT id FROM tasks WHERE engine='grok' AND session=? AND native_turn=? AND id!=? LIMIT 1")
-        .get(task.session, nativeTurn, id);
-      if (other) nativeTurn = undefined;
-    }
     this.db.prepare(`UPDATE tasks SET session=coalesce(?,session), session_name=coalesce(?,session_name),
       native_turn=coalesce(?,native_turn), queue_item=coalesce(?,queue_item), sent_at=coalesce(?,sent_at) WHERE id=?`)
       .run(session ?? null, sessionTitle?.slice(0,240) || null, nativeTurn || null, queueItem ?? null, sentAt ?? null, id);
@@ -185,15 +179,23 @@ export function mountTasks(app: Express, host: PluginHost, hub: EventHub, runs: 
         if (closed) break;
         try {
           const engine = host.get(t.engine);
-          // Grok exposes a clock label, not a date. Don't match a repeated prompt on another day.
-          if (t.engine === 'grok' && t.source === 'workbench' && Date.now() - stampOf(t.created) >= 24 * 60 * 60 * 1000) continue;
+          let nativeTurn = t.native_turn;
+          if (t.engine === 'grok' && t.source === 'workbench' && nativeTurn.startsWith('grok-')) {
+            // A sent receipt proved the text appeared in this group. The desktop has no stable
+            // date/ID here, so don't use a visible message to resolve older or repeated dispatches.
+            const horizon = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            if (t.created < horizon || book.db.prepare(`SELECT 1 FROM tasks WHERE engine='grok' AND session=?
+              AND source='workbench' AND prompt_hash=? AND id!=? AND created>=? AND state NOT IN ('rejected','merged') LIMIT 1`)
+              .get(t.session,t.prompt_hash,t.id,horizon)) continue;
+            nativeTurn = 'grok-msg-' + t.prompt_hash.slice(0,28);
+          }
           const key = hub.key(t.engine, t.session);
           let h = histories.get(key);
           if (!h) { h = presentHistory(await engine.read(t.session)); histories.set(key, h); }
           if (h.session?.id !== t.session) continue;
           const candidates = t.source === 'legacy'
             ? h.turns.filter(v => promptKey(v.userPrompt).startsWith(marker(t.id)))
-            : t.native_turn ? h.turns.filter(v => v.id === t.native_turn)
+            : nativeTurn ? h.turns.filter(v => v.id === nativeTurn)
             : h.turns.filter(v => stampOf(v.timestamp) >= stampOf(t.sent_at) && digest(promptKey(v.userPrompt)) === t.prompt_hash);
           const turn = candidates.length === 1 ? candidates[0] : undefined;
           if (!turn) continue;

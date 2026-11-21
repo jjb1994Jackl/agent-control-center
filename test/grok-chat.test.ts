@@ -20,14 +20,14 @@ test('Grok keeps group speakers distinct and identical prompts in separate turns
   assert.deepEqual(grokTurns(rows).map(turn => turn.id), turns.map(turn => turn.id));
 });
 
-test('Grok reply correlation survives a clipped history but ignores repeated text at the same visible time', () => {
+test('Grok reply correlation survives a clipped history and a changed clock label but ignores repeated text', () => {
   const old = { author:'You', user:true, text:'Earlier user message', stamp:' 10:02' };
   const sent = { author:'You', user:true, text:'Exact dispatch', stamp:' 10:37' };
   const response = { author:'Bot', text:'Exact answer' };
   const anchor = grokTurns([old,sent]).at(-1)?.id;
-  assert.ok(anchor?.startsWith('grok-'));
-  assert.equal(grokTurns([sent,response])[0]?.id, anchor);
-  assert.ok(grokTurns([sent,response,sent]).every(t => !t.id.startsWith('grok-')));
+  assert.ok(anchor?.startsWith('grok-msg-'));
+  assert.equal(grokTurns([{...sent,stamp:' 10:38',author:'你'},response])[0]?.id, anchor);
+  assert.ok(grokTurns([sent,response,sent]).every(t => !t.id.startsWith('grok-msg-')));
 });
 
 test('a native chat is explicitly activated on selection and user messages do not create fake runs', async () => {

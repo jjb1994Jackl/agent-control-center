@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -102,6 +102,29 @@ test('native group replies use the observed turn in the selected group, and pers
       assert.equal(task?.session_name,'Native ' + groups[i]);
     }
   } finally { await restarted.close(); rmSync(folder,{recursive:true,force:true}); }
+});
+
+test('previous Grok dispatches can recover with an exact unique prompt, but two matching dispatches in one group stay unassigned', async () => {
+  const dir = mkdtempSync(join(tmpdir(),'acc-grok-correlation-')), file = join(dir,'tasks.sqlite');
+  const prompt = 'Exact message', id = randomUUID(), copy = randomUUID();
+  const book = new TaskBook(file);
+  for (const [dispatch,session] of [[id,'one'],[copy,'two'],[randomUUID(),'two']] as const) {
+    book.reserveWorkbench({id:dispatch,engine:'grok',session,project:'',prompt});
+    book.link(dispatch,{nativeTurn:'grok-legacy-observed'}); book.set(dispatch,'delivered');
+  }
+  book.db.close();
+  const host = new PluginHost(), turn = 'grok-msg-' + createHash('sha256').update(prompt).digest('hex').slice(0,28);
+  host.register({id:'grok',label:'Grok',capabilities:{},status:()=>({connected:true}),list:()=>[],models:()=>[],
+    create:()=>({id:'one'}),send:()=>{throw new Error('unexpected resend');},
+    read:id=>({session:new UnifiedSession({id,engine:'grok'}),turns:[new UnifiedTurn({id:turn,userPrompt:prompt,status:'unknown',assistantReply:'Confirmed reply'})]}),
+  });
+  const s = await serve(host,{taskFile:file});
+  try {
+    await s.request('/tasks'); await delay(20);
+    const rows = await (await s.request('/tasks')).json() as {id:string;state:string}[];
+    assert.equal(rows.find(t=>t.id===id)?.state,'replied');
+    assert.equal(rows.find(t=>t.id===copy)?.state,'delivered');
+  } finally { await s.close(); rmSync(dir,{recursive:true,force:true}); }
 });
 
 test('discovered session-only plugin dispatches and reconciles two distinct replies without resending', async () => {

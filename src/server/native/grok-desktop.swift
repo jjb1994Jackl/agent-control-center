@@ -41,14 +41,14 @@ func grokReadText(_ root: AXUIElement) -> String {
   let text = within(root) { role($0) == "AXStaticText" }.map(grokText).filter { !$0.isEmpty }
   return text.joined(separator: "\n")
 }
-func grokRowSpeaker(_ message: AXUIElement) -> (String, String)? {
+func grokRowSpeaker(_ message: AXUIElement) -> String? {
   var possible = grokParent(message)
   for _ in 0..<7 {
     guard let row = possible else { break }
     if classes(row).contains("sand-transcript-row") {
       let label = name(row)
       if let stamp = label.range(of: #"\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s+[AP]M)?$"#, options: [.regularExpression, .caseInsensitive]) {
-        return (String(label[..<stamp.lowerBound]), String(label[stamp]))
+        return String(label[..<stamp.lowerBound])
       }
       return nil
     }
@@ -63,15 +63,14 @@ func grokChatMessages() -> [[String: Any]] {
     let prose = within(message, { classes($0).contains("sand-message-prose") }).first
     let bodyNodes = Set(prose.map { within($0) { _ in true } } ?? [])
     let labels = within(message, { role($0) == "AXStaticText" && !bodyNodes.contains($0) }).map(grokText)
-    let speaker = grokRowSpeaker(message)
-    guard let author = speaker?.0 ?? labels.first, !author.isEmpty else { return nil }
+    guard let author = grokRowSpeaker(message) ?? labels.first, !author.isEmpty else { return nil }
     let words = labels.first == author ? Array(labels.dropFirst()) : labels
     var text = prose.map(grokReadText) ?? words.joined(separator: "\n")
     if text.isEmpty, name(message).hasPrefix(author + " ") {
       text = String(name(message).dropFirst(author.count + 1))
     }
     guard !text.isEmpty else { return nil }
-    return ["author": String(author.prefix(120)), "user": own.contains(author), "text": String(text.prefix(32000)), "stamp": speaker?.1 ?? ""]
+    return ["author": String(author.prefix(120)), "user": own.contains(author), "text": String(text.prefix(32000))]
   }
 }
 func grokPrimaryChat() -> AXUIElement? {
