@@ -1,0 +1,42 @@
+{
+  "name": "Antigravity 桌面版",
+  "bundleId": "com.google.antigravity",
+  "windows": {
+    "exe": "Antigravity.exe",
+    "locators": {
+      "messageMark": {
+        "class": [
+          "sr-only",
+          "select-none"
+        ]
+      }
+    }
+  },
+  "accessibilitySwitches": [
+    "AXManualAccessibility"
+  ],
+  "sessionAddress": "/c/{localId}",
+  "titleSuffix": " - Antigravity",
+  "refreshAnchors": [
+    "sessionList"
+  ],
+  "locators": {
+    "sessionList": [
+      {
+        "role": "AXGroup",
+        "class": [
+          "bg-sidebar",
+          "flex-col"
+        ]
+      },
+      {
+        "role": "AXGroup",
+        "name": "Sidebar"
+      }
+    ],
+    "fileLink": {
+      "role": "AXButton",
+      "class": "inline-pill"
+    }
+  }
+}

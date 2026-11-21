@@ -1,0 +1,59 @@
+{
+  "waitSeconds": 12,
+  "steps": [
+    {
+      "label": "codex 1 open: Invoke on the model button",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "invoke"
+      ]
+    },
+    {
+      "label": "codex 2 open: ExpandCollapse.Expand",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "expand"
+      ],
+      "pauseMs": 1500
+    },
+    {
+      "label": "codex 3 submenu: Invoke on Select model",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "selectModelRow",
+        "--do",
+        "invoke"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "codex 4 close: ExpandCollapse.Collapse on the button",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "collapse"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "codex 5 close: LegacyIAccessible.DoDefaultAction on the button",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "default"
+      ],
+      "pauseMs": 1200
+    }
+  ]
+}

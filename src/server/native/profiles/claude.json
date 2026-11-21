@@ -1,0 +1,341 @@
+{
+  "name": "Claude 桌面版",
+  "bundleId": "com.anthropic.claudefordesktop",
+  "windows": {
+    "exe": "claude.exe",
+    "windowStateFile": "%LOCALAPPDATA%\\Claude-Data\\claude_*\\window-state.json",
+    "locators": {
+      "chromeBar": {
+        "role": "AXGroup",
+        "class": "dframe-chrome-bar"
+      },
+      "transcript": [
+        {
+          "role": "AXGroup",
+          "aria": "feed"
+        },
+        {
+          "role": "AXGroup",
+          "name": "Chat messages"
+        }
+      ],
+      "messageMark": {
+        "role": "AXGroup",
+        "prefix": "Message ",
+        "inside": "transcript"
+      },
+      "spaceSwitch": [
+        {
+          "role": "AXRadioGroup",
+          "inside": "chromeBar"
+        },
+        {
+          "role": "AXRadioGroup",
+          "name": "Mode"
+        }
+      ]
+    }
+  },
+  "offscreenMenu": "key",
+  "titleSuffix": " - Claude Code",
+  "sessionLink": "claude://claude.ai/epitaxy/{localId}",
+  "sessionAddress": "/epitaxy/{localId}",
+  "sessionRowsBy": "title",
+  "refreshAnchors": [
+    "composer",
+    "chatComposer",
+    "modelMenu",
+    "chatPane"
+  ],
+  "newPageHeading": "New session",
+  "newPageSkip": [
+    "Model",
+    "Permissions",
+    "Usage"
+  ],
+  "newPageTogglesAfter": "composer",
+  "newPageSkipToggles": [
+    "Press and hold"
+  ],
+  "newPageStart": "pageTitle",
+  "newPageMenusBefore": "modelMenu",
+  "newPageSkipTogglesInside": "composerBox",
+  "trustHeading": "Trust this workspace",
+  "questionSubmit": "Submit",
+  "questionSkip": "Skip",
+  "moreModelsItem": "More models",
+  "effortItem": "Effort",
+  "efforts": [
+    "Low",
+    "Medium",
+    "High",
+    "Extra",
+    "Max"
+  ],
+  "spaces": {
+    "kind": "radio",
+    "control": "spaceSwitch",
+    "names": {
+      "chat": "Claude",
+      "code": "Code"
+    },
+    "home": "code",
+    "titleSuffix": {
+      "chat": " - Claude"
+    }
+  },
+  "modes": [
+    "Auto",
+    "Manual",
+    "Accept edits",
+    "Plan",
+    "Bypass permissions"
+  ],
+  "cardSkip": [
+    "Dismiss"
+  ],
+  "menuSigns": {
+    "modelMenu": {
+      "role": "AXMenuItem",
+      "popup": true
+    }
+  },
+  "locators": {
+    "sidebar": {
+      "role": "AXGroup",
+      "class": "dframe-sidebar"
+    },
+    "moreSessions": {
+      "role": "AXButton",
+      "prefix": "Show ",
+      "contains": " more in ",
+      "inside": "sidebar"
+    },
+    "nestedSessions": {
+      "role": "AXButton",
+      "prefix": "Show nested sessions",
+      "inside": "sidebar"
+    },
+    "chatPane": [
+      {
+        "role": "AXGroup",
+        "class": "dframe-pane-primary"
+      },
+      {
+        "role": "AXGroup",
+        "name": "Primary pane"
+      }
+    ],
+    "chatBody": {
+      "role": "AXGroup",
+      "class": "epitaxy-chat-panel-body"
+    },
+    "menuPopup": {
+      "role": "AXGroup",
+      "class": "group/menu-popup"
+    },
+    "pageTitle": {
+      "role": "AXHeading",
+      "inside": "titlebar"
+    },
+    "titlebar": {
+      "role": "AXGroup",
+      "class": "epitaxy-titlebar"
+    },
+    "newPage": {
+      "role": "AXWebArea",
+      "url": "https://claude.ai/epitaxy"
+    },
+    "composerDock": {
+      "role": "AXGroup",
+      "class": "group/approval-dock"
+    },
+    "composerBox": {
+      "role": "AXGroup",
+      "class": "rounded-composer",
+      "inside": "composerDock"
+    },
+    "transcript": [
+      {
+        "role": "AXGroup",
+        "name": "Chat messages"
+      },
+      {
+        "role": "AXGroup",
+        "subrole": "AXApplicationGroup",
+        "has": "chatMessage",
+        "index": -1
+      }
+    ],
+    "composer": [
+      {
+        "role": "AXTextArea",
+        "class": "ProseMirror",
+        "inside": "composerBox"
+      },
+      {
+        "role": "AXTextArea",
+        "prefix": "Prompt"
+      }
+    ],
+    "send": [
+      {
+        "role": "AXButton",
+        "keys": "Enter",
+        "inside": "composerBox"
+      },
+      {
+        "role": "AXButton",
+        "name": "Send"
+      }
+    ],
+    "stop": [
+      {
+        "role": "AXButton",
+        "keys": "Escape",
+        "inside": "composerBox"
+      },
+      {
+        "role": "AXButton",
+        "name": "Stop"
+      }
+    ],
+    "cancel": {
+      "role": "AXButton",
+      "name": "Cancel"
+    },
+    "dialogConfirm": [
+      {
+        "role": "AXButton",
+        "class": "text-on-primary"
+      },
+      {
+        "role": "AXButton",
+        "name": "Switch model"
+      }
+    ],
+    "sendNow": {
+      "role": "AXButton",
+      "contains": "send now"
+    },
+    "newChat": [
+      {
+        "role": "AXButton",
+        "keys": "Meta+n"
+      },
+      {
+        "role": "AXButton",
+        "name": "New"
+      }
+    ],
+    "modelMenu": [
+      {
+        "role": "AXPopUpButton",
+        "prefix": "Model:"
+      },
+      {
+        "role": "AXPopUpButton",
+        "inside": "composerDock",
+        "index": -3
+      }
+    ],
+    "spaceSwitch": [
+      {
+        "role": "AXRadioGroup",
+        "inside": "sidebar"
+      },
+      {
+        "role": "AXRadioGroup",
+        "name": "Mode"
+      }
+    ],
+    "chatComposer": [
+      {
+        "role": "AXTextArea",
+        "class": "ProseMirror"
+      },
+      {
+        "role": "AXTextArea",
+        "name": "Write your prompt to Claude"
+      }
+    ],
+    "chatSendButton": [
+      {
+        "role": "AXButton",
+        "keys": "Enter",
+        "inside": "chatPane"
+      },
+      {
+        "role": "AXButton",
+        "name": "Send message"
+      }
+    ],
+    "chatStop": {
+      "role": "AXButton",
+      "prefix": "Stop"
+    },
+    "chatNewPage": [
+      {
+        "role": "AXWebArea",
+        "url": "https://claude.ai/new"
+      },
+      {
+        "role": "AXHeading",
+        "prefix": "New session"
+      }
+    ],
+    "chatMessage": {
+      "role": "AXGroup",
+      "subrole": "AXDocumentArticle"
+    },
+    "chatSlot": {
+      "role": "AXButton",
+      "after": "chatComposer",
+      "index": 0
+    }
+  },
+  "chatRead": {
+    "container": "transcript",
+    "speakers": {
+      "You said:": "user",
+      "Claude responded:": "assistant",
+      "Claude said:": "assistant"
+    },
+    "speakerHeading": {
+      "role": "AXHeading",
+      "class": "sr-only"
+    },
+    "assistantIn": {
+      "role": "AXGroup",
+      "class": "group/message-row"
+    },
+    "article": "Message ",
+    "message": {
+      "role": "AXGroup",
+      "subrole": "AXDocumentArticle"
+    },
+    "citation": {
+      "role": "AXLink",
+      "class": "group/tag"
+    },
+    "ignore": [
+      "Claude is AI and can make mistakes",
+      "Use the up and down arrow keys"
+    ]
+  },
+  "chatSend": {
+    "composer": "chatComposer",
+    "send": "chatSendButton",
+    "stop": "chatStop",
+    "stopSlot": "chatSlot",
+    "newChat": "newChat",
+    "newShown": "chatNewPage",
+    "project": [
+      "{project}"
+    ],
+    "projectShown": {
+      "role": "AXHeading",
+      "name": "{project}"
+    }
+  }
+}

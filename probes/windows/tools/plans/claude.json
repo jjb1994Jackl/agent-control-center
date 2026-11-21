@@ -1,0 +1,89 @@
+{
+  "waitSeconds": 12,
+  "guard": {
+    "engine": "claude"
+  },
+  "steps": [
+    {
+      "label": "claude 0 read: the model button as it is",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "inspect",
+        "--names"
+      ]
+    },
+    {
+      "label": "claude 1 open: Invoke on the model button",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "invoke"
+      ],
+      "pauseMs": 1500
+    },
+    {
+      "label": "claude 2 submenu: Expand on Effort",
+      "engine": "claude",
+      "args": [
+        "--role",
+        "AXMenuItem",
+        "--prefix",
+        "Effort",
+        "--do",
+        "expand"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "claude 3 submenu: Expand on More models",
+      "engine": "claude",
+      "args": [
+        "--role",
+        "AXMenuItem",
+        "--prefix",
+        "More models",
+        "--do",
+        "expand"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "claude 4 close: Collapse on the model button",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "collapse"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "claude 5 close: DoDefaultAction on the model button",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "default"
+      ],
+      "pauseMs": 1200
+    },
+    {
+      "label": "claude 6 open: ExpandCollapse.Expand",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "expand"
+      ],
+      "pauseMs": 1500
+    }
+  ]
+}

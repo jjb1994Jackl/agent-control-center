@@ -1,0 +1,8 @@
+# One line ending everywhere: the sources are LF in the repository, and tests read some of them
+# as text (the native helpers' Swift and C#). Without this, Git for Windows' default
+# (core.autocrlf=true) checks them out with CRLF.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
+*.woff2 binary

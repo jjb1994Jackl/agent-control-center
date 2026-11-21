@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": false
+  },
+  "include": [
+    "test/**/*",
+    "src/server/**/*",
+    "src/shared/**/*",
+    "src/client/js/**/*.ts",
+    "src/client/kit/**/*.ts",
+    "src/client/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "src/server/native/**"
+  ]
+}

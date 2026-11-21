@@ -1,0 +1,16 @@
+{
+  "waitSeconds": 12,
+  "steps": [
+    {
+      "label": "codex (scheduled task) open: ExpandCollapse.Expand",
+      "engine": "codex",
+      "args": [
+        "--locator",
+        "modelMenu",
+        "--do",
+        "expand"
+      ],
+      "pauseMs": 1500
+    }
+  ]
+}

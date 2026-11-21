@@ -1,0 +1,15 @@
+<!-- Agent Frontdesk: a front-desk bell that is also an agent. The square master; the page rounds
+     its corners (style.css, .brand-logo). logo-*.png are this file at each size. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#161616"/>
+  <g transform="translate(256 262) scale(1.16) translate(-256 -262)">
+    <!-- the desk -->
+    <rect x="108" y="358" width="296" height="36" rx="18" fill="#f3f0e8"/>
+    <!-- the bell on it, which is also an agent looking over the desk -->
+    <path d="M146 340V314C146 250 195 200 256 200s110 50 110 114v26Z" fill="#f3f0e8" stroke="#f3f0e8" stroke-width="12" stroke-linejoin="round"/>
+    <!-- its eyes -->
+    <rect x="205" y="264" width="28" height="48" rx="14" fill="#161616"/><rect x="279" y="264" width="28" height="48" rx="14" fill="#161616"/>
+    <!-- the button you press to call it, in the console's own green -->
+    <rect x="245" y="170" width="22" height="34" fill="#f3f0e8"/><circle cx="256" cy="158" r="25" fill="#97c8aa"/>
+  </g>
+</svg>

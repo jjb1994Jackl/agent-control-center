@@ -1,0 +1,56 @@
+{
+  "waitSeconds": 15,
+  "guard": {
+    "engine": "claude"
+  },
+  "steps": [
+    {
+      "label": "claude read: the composer before",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "inspect"
+      ]
+    },
+    {
+      "label": "claude fill on desktop 2: Value.SetValue",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "setvalue",
+        "--text",
+        "Frontdesk 桌面2 填入测试（不要发送）",
+        "--watch",
+        "send"
+      ],
+      "pauseMs": 1500
+    },
+    {
+      "label": "claude read: the composer 3 s later",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "inspect",
+        "--watch",
+        "send"
+      ],
+      "pauseMs": 3000
+    },
+    {
+      "label": "claude read: Send",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "send",
+        "--do",
+        "inspect"
+      ]
+    }
+  ]
+}

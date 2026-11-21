@@ -1,0 +1,322 @@
+/* Agent Frontdesk chat kit — the chat page every coding agent can use as is.
+   The structure a coding agent's desktop app shares (projects and chats in the sidebar, the
+   conversation with folded tool rows, step lists, question cards, the composer with model,
+   effort and permission) drawn once, in the "Claude" style: the design measured from the Claude
+   desktop app's Code tab (docs/skins/claude/fidelity.md).
+
+   Every engine's page is drawn with it. The page carries html[data-ui="kit"], and everything
+   here is scoped to that attribute. An engine changes the look only through the
+   --kit-* tokens (in its own skin, under html[data-engine="<id>"]), and adds what is its own
+   through renderers (see kit/kit.ts). */
+
+html[data-ui="kit"] {
+  --kit-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", sans-serif;
+  --kit-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --kit-bg: #ffffff; --kit-side: #fbfbfb; --kit-side-line: #eaeaea; --kit-rule: #e6e6e6;
+  --kit-text: #202020; --kit-muted: #797979; --kit-faint: #999999; --kit-soft: #6b6b6b;
+  --kit-select: #e7e7e7; --kit-hover: #f0f0f0; --kit-bubble: #f5f5f5;
+  --kit-input: #ffffff; --kit-input-line: #e3e3e3; --kit-code: #f3f3f3; --kit-card-line: #e6e6e6;
+  --kit-pop: #ffffff; --kit-pop-line: #e5e5e5; --kit-pop-hover: #f3f3f3;
+  --kit-accent: var(--engine-accent, #d97757); --kit-blue: #4f91e1; --kit-amber: #f0a83a; --kit-red: #c73b3b;
+  --kit-shadow: 0 1px 2px rgb(0 0 0 / .05), 0 2px 8px rgb(0 0 0 / .04);
+  --kit-pop-shadow: 0 10px 15px -3px rgb(0 0 0 / .1), 0 4px 6px -4px rgb(0 0 0 / .1);
+  --kit-button: #202020; --kit-button-text: #ffffff;
+}
+html[data-ui="kit"][data-theme="dark"] {
+  --kit-bg: #212121; --kit-side: #292929; --kit-side-line: #3f3f3f; --kit-rule: #454545;
+  --kit-text: #f2f2f2; --kit-muted: #a6a6a6; --kit-faint: #8a8a8a; --kit-soft: #b0b0b0;
+  --kit-select: #515151; --kit-hover: #333333; --kit-bubble: #333333;
+  --kit-input: #3f3f3f; --kit-input-line: #515151; --kit-code: #333333; --kit-card-line: #454545;
+  --kit-pop: #3f3f3f; --kit-pop-line: #484848; --kit-pop-hover: #4a4a4a;
+  --kit-red: #ec7e7e; --kit-button: #f2f2f2; --kit-button-text: #202020;
+  --kit-shadow: 0 1px 2px rgb(0 0 0 / .3); --kit-pop-shadow: 0 10px 24px rgb(0 0 0 / .45);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-ui="kit"]:not([data-theme="light"]) {
+    --kit-bg: #212121; --kit-side: #292929; --kit-side-line: #3f3f3f; --kit-rule: #454545;
+    --kit-text: #f2f2f2; --kit-muted: #a6a6a6; --kit-faint: #8a8a8a; --kit-soft: #b0b0b0;
+    --kit-select: #515151; --kit-hover: #333333; --kit-bubble: #333333;
+    --kit-input: #3f3f3f; --kit-input-line: #515151; --kit-code: #333333; --kit-card-line: #454545;
+    --kit-pop: #3f3f3f; --kit-pop-line: #484848; --kit-pop-hover: #4a4a4a;
+    --kit-red: #ec7e7e; --kit-button: #f2f2f2; --kit-button-text: #202020;
+    --kit-shadow: 0 1px 2px rgb(0 0 0 / .3); --kit-pop-shadow: 0 10px 24px rgb(0 0 0 / .45);
+  }
+}
+
+/* Workbench tokens, redefined for Claude's part of the page only. */
+html[data-ui="kit"] .app-shell {
+  --ground: var(--kit-bg); --surface: var(--kit-hover); --raised: var(--kit-bubble); --border: var(--kit-rule); --rule: var(--kit-rule);
+  --text: var(--kit-text); --muted: var(--kit-soft); --faint: var(--kit-muted); --control: var(--kit-input-line);
+  font-family: var(--kit-font); color: var(--kit-text); background: var(--kit-bg);
+  font-variant-numeric: normal;
+}
+
+/* ---------- sidebar and header ----------
+   Their layout is the shared one (style.css); the kit only gives them its colours. */
+html[data-ui="kit"] .sidebar { --side-bg: var(--kit-side); --side-line: var(--kit-side-line); --side-select: var(--kit-select); --side-attention: var(--kit-accent); }
+html[data-ui="kit"] .space-menu:focus-visible { outline: 2px solid var(--kit-accent); outline-offset: 1px; }
+html[data-ui="kit"] .draft-label { color: var(--kit-muted); }
+html[data-ui="kit"] .chat-header { background: var(--kit-bg); }
+
+/* ---------- conversation ---------- */
+html[data-ui="kit"] .conversation { background: var(--kit-bg); }
+html[data-ui="kit"] .timeline { width: min(768px, calc(100% - 32px)); padding: 28px 18px 40px; }
+html[data-ui="kit"] .turn.kit-turn { margin-bottom: 28px; }
+html[data-ui="kit"] .kit-user { display: flex; flex-direction: column; align-items: flex-end; margin: 0 0 22px; }
+html[data-ui="kit"] .kit-user .user-message { margin: 0; max-width: 80%; background: var(--kit-bubble); color: var(--kit-text); padding: 10px 16px; border-radius: 16px; font-size: 15px; line-height: 1.6; }
+html[data-ui="kit"] .kit-body { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
+html[data-ui="kit"] .kit-text, html[data-ui="kit"] .kit-tools, html[data-ui="kit"] .kit-thinking { max-width: 676px; }
+html[data-ui="kit"] .kit-text { font-size: 15px; line-height: 1.65; color: var(--kit-text); margin: 0 0 16px; }
+html[data-ui="kit"] .kit-text p { margin: 0 0 12px; }
+html[data-ui="kit"] .kit-text p:last-child { margin-bottom: 0; font-size: inherit; padding: 0; }
+html[data-ui="kit"] .kit-text ul, html[data-ui="kit"] .kit-text ol { margin: 0 0 12px; padding-left: 28px; }
+html[data-ui="kit"] .kit-text li { margin: 0 0 4px; }
+html[data-ui="kit"] .kit-text li > ul, html[data-ui="kit"] .kit-text li > ol { margin: 4px 0 0; }
+html[data-ui="kit"] .kit-text strong { font-weight: 600; }
+html[data-ui="kit"] .kit-text h1, html[data-ui="kit"] .kit-text h2, html[data-ui="kit"] .kit-text h3 { font-weight: 600; line-height: 1.4; margin: 20px 0 10px; }
+html[data-ui="kit"] .kit-text h1 { font-size: 20px; } html[data-ui="kit"] .kit-text h2 { font-size: 17px; } html[data-ui="kit"] .kit-text h3 { font-size: 15px; }
+html[data-ui="kit"] .kit-text code { font-family: var(--kit-mono); font-size: 13px; background: var(--kit-code); border-radius: 4px; padding: 1px 4px; }
+html[data-ui="kit"] .kit-text pre { background: transparent; border: 1px solid var(--kit-card-line); border-radius: 8px; padding: 10px 14px; overflow-x: auto; margin: 0 0 12px; }
+html[data-ui="kit"] .kit-text pre code { background: none; padding: 0; font-size: 13px; line-height: 1.55; }
+html[data-ui="kit"] .kit-text a { color: var(--kit-blue); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--kit-blue) 45%, transparent); }
+/* a source the reply cites, drawn as the desktop's chip after the sentence (renderers.ts: a link titled "citation") */
+html[data-ui="kit"] .kit-text a.md-cite { display: inline-flex; align-items: center; height: 18px; margin: 0 2px; padding: 0 7px; border: 1px solid var(--kit-card-line); border-radius: 999px; font-size: 12px; line-height: 1; color: var(--kit-muted); text-decoration: none; white-space: nowrap; vertical-align: 1px; }
+html[data-ui="kit"] .kit-text a.md-cite:hover { color: var(--kit-text); background: var(--kit-code); }
+html[data-ui="kit"] .kit-text table { border-collapse: collapse; margin: 0 0 12px; font-size: 14px; }
+html[data-ui="kit"] .kit-text th, html[data-ui="kit"] .kit-text td { border-bottom: 1px solid var(--kit-card-line); padding: 6px 12px 6px 0; text-align: left; }
+html[data-ui="kit"] .kit-text th { font-weight: 600; }
+html[data-ui="kit"] .kit-text blockquote { margin: 0 0 12px; padding-left: 12px; border-left: 2px solid var(--kit-card-line); color: var(--kit-soft); }
+
+/* tool rows: one summarized line, a card when opened */
+html[data-ui="kit"] .kit-tools { margin: 0 0 16px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-tools > summary { display: flex; align-items: center; gap: 6px; min-height: 26px; list-style: none; font-size: 15px; line-height: 1.65; }
+html[data-ui="kit"] .kit-tools > summary::-webkit-details-marker, html[data-ui="kit"] .kit-tool > summary::-webkit-details-marker { display: none; }
+html[data-ui="kit"] .kit-tools > summary:hover { color: var(--kit-text); }
+html[data-ui="kit"] .kit-tools > summary > .lucide { width: 14px; height: 14px; flex: none; transition: transform 120ms ease; }
+html[data-ui="kit"] .kit-tools[open] > summary > .lucide { transform: rotate(90deg); }
+html[data-ui="kit"] .kit-caption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html[data-ui="kit"] .kit-thumbs { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+html[data-ui="kit"] .kit-thumbs img { width: 48px; height: 32px; object-fit: cover; object-position: top left; border-radius: 4px; border: 1px solid var(--kit-card-line); background: var(--kit-bg); }
+html[data-ui="kit"] .kit-more { font-size: 15px; color: var(--kit-muted); margin-right: 4px; }
+html[data-ui="kit"] .kit-tool-card { margin-top: 8px; border: 1px solid var(--kit-card-line); border-radius: 12px; overflow: hidden; }
+html[data-ui="kit"] .kit-tool + .kit-tool { border-top: 1px solid var(--kit-card-line); }
+html[data-ui="kit"] .kit-tool > summary { display: flex; align-items: center; gap: 6px; height: 34px; overflow: hidden; padding: 0 12px; list-style: none; font-size: 14px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-tool > summary > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-ui="kit"] .kit-tool > summary:hover { color: var(--kit-text); }
+html[data-ui="kit"] .kit-tool > summary .lucide { width: 13px; height: 13px; flex: none; transform: rotate(-90deg); transition: transform 120ms ease; }
+html[data-ui="kit"] .kit-tool[open] > summary .lucide { transform: none; }
+html[data-ui="kit"] .kit-tool.is-failed > summary { color: var(--kit-red); }
+html[data-ui="kit"] .kit-failed { font-size: 12px; flex: none; white-space: nowrap; }
+html[data-ui="kit"] .kit-command, html[data-ui="kit"] .kit-input { margin: 0 12px 10px; padding: 10px 14px; border: 1px solid var(--kit-card-line); border-radius: 8px; font-family: var(--kit-mono); font-size: 13px; line-height: 1.6; color: var(--kit-text); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 280px; overflow: auto; }
+html[data-ui="kit"] .kit-prompt { color: var(--kit-muted); }
+html[data-ui="kit"] .kit-output { margin: 0; padding: 4px 12px 12px; font-family: var(--kit-mono); font-size: 13px; line-height: 1.6; color: var(--kit-soft); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
+html[data-ui="kit"] .kit-empty { margin: 0; padding: 0 12px 10px; font-size: 13px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-shots { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px 12px; }
+html[data-ui="kit"] .kit-shot img { display: block; max-width: 100%; max-height: 360px; border-radius: 8px; border: 1px solid var(--kit-card-line); }
+
+/* running: Claude's clay dots */
+html[data-ui="kit"] .kit-dots { display: inline-flex; gap: 3px; width: 18px; flex: none; }
+html[data-ui="kit"] .kit-dots i { width: 4px; height: 4px; border-radius: 1px; background: var(--kit-accent); animation: kit-dot 1.2s ease-in-out infinite; }
+html[data-ui="kit"] .kit-dots i:nth-child(2) { animation-delay: .2s; }
+html[data-ui="kit"] .kit-dots i:nth-child(3) { animation-delay: .4s; }
+html[data-ui="kit"] .kit-thinking { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--kit-muted); margin: 0 0 16px; min-height: 26px; }
+@keyframes kit-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-2px); } }
+@keyframes kit-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+/* the step list: a card under the latest message, as the desktop pins it */
+html[data-ui="kit"] .kit-plan { max-width: none; margin: 0 0 18px; padding: 12px 16px 14px; border: 1px solid var(--kit-card-line); border-radius: 12px; background: transparent; }
+html[data-ui="kit"] .kit-plan ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+html[data-ui="kit"] .kit-plan li { display: flex; align-items: center; gap: 8px; min-height: 24px; font-size: 15px; line-height: 1.5; color: var(--kit-text); }
+html[data-ui="kit"] .kit-mark { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 1.2px dashed var(--kit-muted); position: relative; box-sizing: border-box; }
+html[data-ui="kit"] .kit-plan li.is-in_progress .kit-mark { border: 1.4px solid color-mix(in srgb, var(--kit-muted) 35%, transparent); border-top-color: var(--kit-muted); animation: activity-spin 1s linear infinite; }
+html[data-ui="kit"] .kit-plan li.is-completed { color: var(--kit-soft); }
+html[data-ui="kit"] .kit-plan li.is-completed .kit-mark { border: 0; background: var(--kit-soft); }
+html[data-ui="kit"] .kit-plan li.is-completed .kit-mark::after { content: ""; position: absolute; left: 5px; top: 3px; width: 3px; height: 6px; border: solid var(--kit-bg); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+
+/* the end-of-turn card */
+html[data-ui="kit"] .kit-wrapup { margin: 4px 0 16px; padding: 14px 20px 16px; border: 1px solid var(--kit-card-line); border-radius: 12px; }
+html[data-ui="kit"] .kit-recap { margin: 0; font-size: 15px; line-height: 1.65; color: var(--kit-soft); }
+html[data-ui="kit"] .kit-ask { margin: 12px 0 0; font-size: 15px; color: var(--kit-text); }
+html[data-ui="kit"] .kit-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+html[data-ui="kit"] .kit-action { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 6px; font-size: 14px; border: 1px solid var(--kit-card-line); color: var(--kit-text); }
+html[data-ui="kit"] .kit-action.is-primary { background: var(--kit-button); color: var(--kit-button-text); border-color: var(--kit-button); }
+html[data-ui="kit"] .kit-status { margin: 0 0 12px; font-size: 14px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-turn-actions { display: flex; opacity: 0; transition: opacity 120ms ease; margin-top: -8px; }
+html[data-ui="kit"] .kit-turn:hover .kit-turn-actions, html[data-ui="kit"] .kit-turn-actions:focus-within { opacity: 1; }
+html[data-ui="kit"] .kit-turn-actions .icon-button { width: 28px; height: 28px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-turn-actions .lucide { width: 15px; height: 15px; }
+html[data-ui="kit"] .kit-body .artifact-grid, html[data-ui="kit"] .kit-body .approval { margin: 0 0 16px; }
+
+/* empty state: Clawd in the middle, as on the desktop's new session page */
+html[data-ui="kit"] .empty-conversation { align-items: center; text-align: center; justify-content: center; min-height: 60vh; gap: 10px; }
+html[data-ui="kit"] .empty-conversation .workspace-label, html[data-ui="kit"] .empty-note { display: none; }
+html[data-ui="kit"] .empty-conversation h2 { font-size: 15px; font-weight: 400; letter-spacing: 0; color: var(--kit-text); margin: 0; }
+/* (Its own line of explanation only: the new chat's cards under it are styled in style.css.) */
+html[data-ui="kit"] .empty-conversation > p { font-size: 14px; color: var(--kit-muted); margin: 0; }
+html[data-ui="kit"] .empty-conversation .secondary-button { border-radius: 8px; border: 1px solid var(--kit-card-line); background: var(--kit-bg); color: var(--kit-text); }
+
+/* ---------- composer: one pill, + on the left, mic and stop on the right, model below ---------- */
+html[data-ui="kit"] .composer-area { width: min(768px, calc(100% - 32px)); padding-bottom: 34px; }
+html[data-ui="kit"] .composer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; min-height: 45px; padding: 6px 10px; background: var(--kit-input); border: 1px solid var(--kit-input-line); border-radius: 16px; box-shadow: var(--kit-shadow); }
+html[data-ui="kit"] .composer:focus-within { border-color: var(--kit-input-line); }
+html[data-ui="kit"] .composer-toolbar, html[data-ui="kit"] .composer-options { display: contents; }
+html[data-ui="kit"] .attachment-strip { order: 0; flex: 1 0 100%; padding: 4px 0 6px; }
+html[data-ui="kit"] #attach { order: 1; width: 30px; height: 30px; border-radius: 8px; color: var(--kit-text); }
+html[data-ui="kit"] #attach:hover { background: var(--kit-hover); }
+html[data-ui="kit"] #attach .lucide { width: 18px; height: 18px; }
+html[data-ui="kit"] #prompt { order: 2; flex: 1 1 0; min-width: 0; min-height: 24px; padding: 4px 6px; font-size: 15px; line-height: 1.6; color: var(--kit-text); }
+html[data-ui="kit"] #prompt::placeholder { color: var(--kit-faint); }
+html[data-ui="kit"] #dictate { order: 4; width: 30px; height: 30px; border-radius: 8px; color: var(--kit-text); }
+html[data-ui="kit"] #send, html[data-ui="kit"] #stop { order: 3; width: 30px; height: 30px; border-radius: 8px; background: transparent; color: var(--kit-text); }
+html[data-ui="kit"] #send:disabled { display: none; }
+html[data-ui="kit"] #send:not(:disabled) { background: var(--kit-button); color: var(--kit-button-text); border-radius: 50%; width: 28px; height: 28px; }
+html[data-ui="kit"] #send .lucide { width: 16px; height: 16px; }
+html[data-ui="kit"] #stop .lucide { width: 15px; height: 15px; fill: currentColor; stroke: currentColor; stroke-width: 2.4; stroke-linejoin: round; }
+/* model · effort · permission: one row under the composer, right-aligned (kit.ts moves the buttons here) */
+html[data-ui="kit"] .kit-settings { position: absolute; right: 4px; bottom: 4px; display: flex; align-items: center; gap: 2px; }
+html[data-ui="kit"] .new-target-row { position: absolute; left: 4px; bottom: 4px; margin: 0; max-width: calc(100% - 210px); }
+html[data-ui="kit"] .new-target-row:focus-within { z-index: 2; }
+html[data-ui="kit"] .new-target { max-width: min(320px, 100%); min-width: 0; height: 26px; border: 0; background: transparent; font-size: 14px; color: var(--kit-soft); border-radius: 6px; }
+html[data-ui="kit"] .new-target:hover:not(:disabled), html[data-ui="kit"] .new-target[aria-expanded="true"] { background: var(--kit-select); color: var(--kit-text); }
+html[data-ui="kit"] .kit-settings[hidden], html[data-ui="kit"] .kit-settings .select-button[hidden] { display: none; }
+/* The row sits low, 4px under the pill and 4px above the area's edge: an invisible pad fills both
+   gaps so the pointer still lands on a 34px target while the visible pill keeps the desktop's 26px. */
+html[data-ui="kit"] .kit-settings .select-button, html[data-ui="kit"] .new-target { position: relative; }
+html[data-ui="kit"] .kit-settings .select-button::after, html[data-ui="kit"] .new-target::after { content: ""; position: absolute; inset: -4px 0; }
+html[data-ui="kit"] .kit-settings .select-button { height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; box-shadow: none; font-size: 14px; color: var(--kit-text); gap: 0; }
+html[data-ui="kit"] .kit-settings .select-button .select-chevron { display: none; }
+html[data-ui="kit"] .kit-settings .select-button:hover:not(:disabled), html[data-ui="kit"] .kit-settings .select-button[aria-expanded="true"] { background: var(--kit-select); color: var(--kit-text); }
+html[data-ui="kit"] .kit-settings .select-button:disabled { opacity: 1; }
+html[data-ui="kit"] .kit-settings .select-button[data-for="effort"] { color: var(--kit-soft); }
+html[data-ui="kit"] .kit-settings .select-button[data-for="permission"] { margin-left: 8px; }
+html[data-ui="kit"] .composer-caption { display: none; }
+/* (The run state and the "cannot send" note above the composer are the console's own, not the
+   desktop's: style.css draws them the same for every engine.) */
+html[data-ui="kit"] .jump-button { border-radius: 50%; }
+
+/* the model menu, as the desktop draws it (popovers live outside .app-shell) */
+html[data-ui="kit"] .menu-popover[data-for="model"], html[data-ui="kit"] .menu-popover[data-for="effort"], html[data-ui="kit"] .menu-popover[data-for="permission"] { font-family: var(--kit-font); padding: 6px; min-width: 270px !important; background: var(--kit-pop); border: 1px solid var(--kit-pop-line); border-radius: 12px; box-shadow: var(--kit-pop-shadow); color: var(--kit-text); }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option, html[data-ui="kit"] .menu-popover[data-for="effort"] .menu-option, html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option { min-height: 36px; padding: 4px 10px 4px 14px; border-radius: 8px; font-size: 15px; color: var(--kit-text); }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option:hover, html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option:focus-visible,
+html[data-ui="kit"] .menu-popover[data-for="effort"] .menu-option:hover, html[data-ui="kit"] .menu-popover[data-for="effort"] .menu-option:focus-visible,
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option:hover, html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option:focus-visible { background: var(--kit-pop-hover); }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option[hidden] { display: none; }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-description { display: none; }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-check, html[data-ui="kit"] .menu-popover[data-for="effort"] .menu-check, html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-check { order: 3; color: var(--kit-blue); }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option[aria-selected="true"] .menu-check::before, html[data-ui="kit"] .menu-popover[data-for="effort"] .menu-option[aria-selected="true"] .menu-check::before { width: 11px; height: 6px; border-width: 0 0 1.8px 1.8px; }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-hint { order: 2; font-size: 14px; color: var(--kit-muted); }
+html[data-ui="kit"] .menu-popover[data-for="model"] .menu-option[aria-selected="true"] .menu-hint { display: none; }
+
+@media (max-width: 767px) {
+  html[data-ui="kit"] .timeline { width: 100%; padding: 20px 16px 32px; }
+  html[data-ui="kit"] .composer-area { width: calc(100% - 24px); }
+  html[data-ui="kit"] .kit-thumbs img { width: 36px; height: 24px; }
+  html[data-ui="kit"] .kit-tools > summary { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="kit"] .kit-dots i, html[data-ui="kit"] .kit-dot.is-running { animation: none; opacity: 1; }
+}
+
+/* Older turns keep their wrap-up card (recap and question) as the desktop does, without the
+   buttons: only the latest turn's question can still be answered. */
+html[data-ui="kit"] .kit-turn:not(:last-of-type) .kit-wrapup .kit-actions { display: none; }
+html[data-ui="kit"] button.kit-action { font: inherit; font-size: 14px; background: transparent; cursor: pointer; }
+html[data-ui="kit"] button.kit-action.is-primary { background: var(--kit-button); }
+html[data-ui="kit"] button.kit-action:hover:not(:disabled) { filter: brightness(0.94); }
+html[data-ui="kit"] button.kit-action:disabled { cursor: not-allowed; opacity: 0.5; }
+/* A finished turn's step list never spins. */
+html[data-ui="kit"] .kit-plan.is-settled li.is-in_progress .kit-mark { animation: none; border-color: var(--kit-muted); }
+html[data-ui="kit"] .kit-user .user-images { margin: 0 0 8px; max-width: 80%; }
+html[data-ui="kit"] .kit-user .user-image { border-radius: 12px; border-color: var(--kit-card-line); }
+
+/* The per-reply character: it sits in the gutter left of the text column while the conversation
+   is wide enough for one (whatever the sidebars take), so the column keeps the desktop's width,
+   and inside the row when it is not. */
+html[data-ui="kit"] .kit-reply { display: flex; align-items: flex-start; gap: 14px; }
+html[data-ui="kit"] .kit-reply > .kit-body { flex: 1; min-width: 0; }
+html[data-ui="kit"] .turn-avatar { width: 30px; height: 30px; flex: none; position: sticky; top: 10px; margin-top: 1px; }
+html[data-ui="kit"] .turn-avatar .character { width: 100%; height: 100%; }
+html[data-ui="kit"] .conversation { container: conversation / inline-size; }
+@container conversation (min-width: 900px) { html[data-ui="kit"] .kit-reply { margin-left: -44px; } }
+html[data-ui="kit"][data-avatars="off"] .kit-reply { margin-left: 0; }
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-description { font-size: 12.5px; color: var(--kit-muted); }
+/* the permission menu keeps one line of explanation under each mode, with the check on the right */
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option.has-description { grid-template-columns: 1fr 16px; row-gap: 1px; padding-top: 7px; padding-bottom: 7px; }
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option.has-description .menu-label { grid-column: 1; grid-row: 1; }
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option.has-description .menu-check { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; }
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option.has-description .menu-description { grid-column: 1; grid-row: 2; }
+html[data-ui="kit"] .menu-popover[data-for="permission"] .menu-option[hidden] { display: none; }
+
+/* The step list shows under the latest turn only, as on the desktop (older turns keep their rows). */
+html[data-ui="kit"] .kit-turn:not(:last-of-type) .kit-plan { display: none; }
+/* Session notices: "Compacted session · saved 448.5k tokens", "Claude Code notice". */
+html[data-ui="kit"] .kit-notice { margin: 6px 0 14px; font-size: 13px; color: var(--kit-muted); }
+html[data-ui="kit"] details.kit-notice summary { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; list-style: none; }
+html[data-ui="kit"] details.kit-notice summary::-webkit-details-marker { display: none; }
+html[data-ui="kit"] details.kit-notice summary svg { width: 14px; height: 14px; transition: transform 0.15s; }
+html[data-ui="kit"] details.kit-notice[open] summary svg { transform: rotate(90deg); }
+html[data-ui="kit"] details.kit-notice p { margin: 6px 0 0; white-space: pre-wrap; min-width: 0; overflow-wrap: anywhere; }
+
+/* Times: Claude "3 minutes ago" beside copy, Antigravity "2d ago" before it; under a person's
+   message on hover. */
+html[data-ui="kit"] .kit-time { font-size: 12px; color: var(--kit-muted); white-space: nowrap; }
+html[data-ui="kit"] .kit-turn-actions { align-items: center; gap: 6px; }
+html[data-ui="kit"] .kit-user-meta { min-height: 20px; margin-top: 4px; opacity: 0; transition: opacity 120ms ease; }
+html[data-ui="kit"] .kit-user:hover .kit-user-meta { opacity: 1; }
+html[data-ui="kit"] .kit-user-meta:empty { display: none; }
+
+/* "Worked for 23m 28s ›": the turn's work folded above its answer, with a rule under it. */
+html[data-ui="kit"] .kit-worked { max-width: 676px; margin: 0 0 16px; color: var(--kit-muted); font-size: 15px; }
+html[data-ui="kit"] p.kit-worked, html[data-ui="kit"] .kit-worked > summary { padding-bottom: 10px; border-bottom: 1px solid var(--kit-rule); }
+html[data-ui="kit"] .kit-worked > summary { display: flex; align-items: center; gap: 4px; list-style: none; cursor: pointer; }
+html[data-ui="kit"] .kit-worked > summary::-webkit-details-marker { display: none; }
+html[data-ui="kit"] .kit-worked > summary:hover { color: var(--kit-text); }
+html[data-ui="kit"] .kit-worked > summary .lucide { width: 14px; height: 14px; transition: transform 120ms ease; }
+html[data-ui="kit"] .kit-worked[open] > summary .lucide { transform: rotate(90deg); }
+html[data-ui="kit"] .kit-worked-body { padding-top: 14px; }
+html[data-ui="kit"] .kit-worked.is-live { border-bottom: 0; padding-bottom: 0; }
+
+/* The card of a page the desktop opened in its Browser pane. */
+html[data-ui="kit"] .kit-preview { display: flex; align-items: center; gap: 16px; max-width: 676px; margin: 4px 0 16px; padding: 14px 16px 14px 20px; border: 1px solid var(--kit-card-line); border-radius: 12px; color: var(--kit-text); text-decoration: none; }
+html[data-ui="kit"] .kit-preview:hover { background: var(--kit-hover); }
+html[data-ui="kit"] .kit-preview-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+html[data-ui="kit"] .kit-preview-name, html[data-ui="kit"] .kit-preview-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-ui="kit"] .kit-preview-name { font-size: 15px; }
+html[data-ui="kit"] .kit-preview-where { font-size: 14px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-preview-open { flex: none; padding: 5px 14px; border-radius: 8px; background: var(--kit-code); font-size: 14px; color: var(--kit-soft); }
+
+/* Codex turn diff card. */
+html[data-ui="kit"] .kit-diff { max-width: 676px; margin: 4px 0 16px; border: 1px solid var(--kit-card-line); border-radius: 12px; overflow: hidden; font-size: 14px; }
+html[data-ui="kit"] .kit-diff-head { padding: 10px 14px; font-weight: 500; color: var(--kit-text); }
+html[data-ui="kit"] .kit-diff ul { list-style: none; margin: 0; padding: 0; }
+html[data-ui="kit"] .kit-diff li { display: flex; align-items: center; gap: 12px; padding: 7px 14px; border-top: 1px solid var(--kit-card-line); }
+html[data-ui="kit"] .kit-diff-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--kit-mono); font-size: 13px; }
+html[data-ui="kit"] .kit-diff-count { display: inline-flex; gap: 6px; font-family: var(--kit-mono); font-size: 12px; flex: none; white-space: nowrap; }
+html[data-ui="kit"] .kit-diff ins { color: #1a7f37; text-decoration: none; }
+html[data-ui="kit"] .kit-diff del { color: var(--kit-red); text-decoration: none; }
+html[data-ui="kit"] .kit-diff-more > summary { padding: 8px 14px; border-top: 1px solid var(--kit-card-line); color: var(--kit-muted); cursor: pointer; list-style: none; }
+html[data-ui="kit"] .kit-diff-more > summary::-webkit-details-marker { display: none; }
+html[data-ui="kit"] .kit-diff-more > summary:hover { color: var(--kit-text); }
+html[data-ui="kit"] .kit-diff-more .when-open, html[data-ui="kit"] .kit-diff-more[open] .when-closed { display: none; }
+html[data-ui="kit"] .kit-diff-more[open] .when-open { display: inline; }
+
+/* Code blocks with their language and a copy button. */
+html[data-ui="kit"] .kit-code { border: 1px solid var(--kit-card-line); border-radius: 8px; margin: 0 0 12px; overflow: hidden; }
+html[data-ui="kit"] .kit-code-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 2px 12px; background: var(--kit-code); font-size: 12px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-code-head .icon-button { width: 26px; height: 26px; color: var(--kit-muted); }
+html[data-ui="kit"] .kit-code-head .icon-button.is-copied { color: #1a7f37; }
+html[data-ui="kit"] .kit-code-head .lucide { width: 14px; height: 14px; }
+html[data-ui="kit"] .kit-text .kit-code pre { border: 0; border-radius: 0; margin: 0; }
+
+/* Antigravity marks a file link with its type, as a small badge before the name. */
+html[data-engine="antigravity"] .file-link[data-ext]:not([data-ext=""])::before { content: attr(data-ext); display: inline-block; margin-right: 4px; font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--kit-amber); vertical-align: 1px; text-decoration: none; }
+
+/* Mid-turn sending: queue button beside send, queued messages above the text. */
+html[data-ui="kit"] .queue-strip { order: 0; padding: 4px 0 6px; }
+html[data-ui="kit"] #queue { order: 3; width: 30px; height: 30px; border-radius: 8px; }
+/* A message the person added while the turn ran, where it joined the turn. */
+html[data-ui="kit"] .kit-steer { display: flex; justify-content: flex-end; margin: 4px 0 16px; }
+html[data-ui="kit"] .kit-steer .user-message { margin: 0; max-width: 80%; background: var(--kit-bubble); color: var(--kit-text); padding: 8px 14px; border-radius: 16px; font-size: 15px; line-height: 1.6; white-space: pre-wrap; }
+/* Long drafts grow the text upward; +, send, mic and stop stay on the bottom line (centred on its last row). */
+html[data-ui="kit"] .composer > .icon-button, html[data-ui="kit"] .composer #attach, html[data-ui="kit"] .composer #dictate, html[data-ui="kit"] .composer #send, html[data-ui="kit"] .composer #stop, html[data-ui="kit"] .composer #queue { align-self: flex-end; margin-bottom: 1px; }
+html[data-ui="kit"] .composer #send:not(:disabled) { margin-bottom: 2px; }

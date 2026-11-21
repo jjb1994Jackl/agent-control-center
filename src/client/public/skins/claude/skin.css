@@ -1,0 +1,18 @@
+/* Claude skin. Claude's chat page is the shared chat kit (src/client/kit), whose "Claude" style was
+   measured from this desktop app (docs/skins/claude/fidelity.md). What is left here is Claude's
+   own: its typeface, and Clawd on the new-session page. Scoped to html[data-engine="claude"]. */
+
+/* Anthropic Sans, served at runtime from the installed Claude app (never copied into this project). */
+@font-face { font-family: "cl-anthropic-sans"; src: url("/api/characters/claude-font-text") format("woff2"); font-weight: 300 800; font-style: normal; font-display: swap; unicode-range: U+0000-005B, U+005D-00A0, U+00A2-00A3, U+00A5-00FF, U+2000-206F, U+20AC, U+2122; }
+@font-face { font-family: "cl-anthropic-sans"; src: url("/api/characters/claude-font-roman") format("woff2"); font-weight: 300 800; font-style: normal; font-display: swap; unicode-range: U+005C, U+00A1, U+00A4, U+0100-024F, U+2190-21FF, U+E000-E13F; }
+@font-face { font-family: "cl-anthropic-sans"; src: url("/api/characters/claude-font-italic") format("woff2"); font-weight: 300 800; font-style: italic; font-display: swap; }
+
+html[data-engine="claude"] {
+  --kit-font: "cl-anthropic-sans", ui-sans-serif, -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", sans-serif;
+}
+html[data-engine="claude"] .app-shell { font-feature-settings: "ss01" 1, "ss02" 1; }
+
+/* Clawd in the middle of a new session, as on the desktop (in place of the shared character that
+   other engines' empty chats show). */
+html[data-engine="claude"] .empty-face { display: none; }
+html[data-engine="claude"] .empty-conversation::before { content: ""; width: 40px; height: 40px; background: url("/api/characters/claude?v=square-cell") 0 0 / 1600% 200% no-repeat; image-rendering: pixelated; }

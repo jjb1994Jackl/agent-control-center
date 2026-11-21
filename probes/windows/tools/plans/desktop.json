@@ -1,0 +1,45 @@
+{
+  "waitSeconds": 12,
+  "guard": {
+    "engine": "claude"
+  },
+  "steps": [
+    {
+      "label": "claude A read: the composer as it is",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "inspect"
+      ]
+    },
+    {
+      "label": "claude A fill from behind: Value.SetValue",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "setvalue",
+        "--text",
+        "Frontdesk 另一个桌面发送测试：请只回复 OK，不要运行任何命令。",
+        "--watch",
+        "send"
+      ],
+      "pauseMs": 1500
+    },
+    {
+      "label": "claude B send from behind: Invoke on Send",
+      "engine": "claude",
+      "waitSeconds": 12,
+      "args": [
+        "--locator",
+        "send",
+        "--do",
+        "invoke"
+      ],
+      "pauseMs": 3000
+    }
+  ]
+}

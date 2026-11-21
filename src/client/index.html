@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN" data-ui="kit">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <script>try { const lang = localStorage.getItem('desktop-bridge:lang'); if (lang === 'en' || (lang !== 'zh' && !/^zh\b/i.test(navigator.language || 'zh'))) document.documentElement.lang = 'en'; const theme = localStorage.getItem('desktop-bridge:theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; document.documentElement.dataset.bubble = localStorage.getItem('desktop-bridge:bubble') === 'side' ? 'side' : 'below'; document.documentElement.dataset.avatars = localStorage.getItem('desktop-bridge:avatars') === 'off' ? 'off' : 'on'; } catch { document.documentElement.dataset.bubble = 'below'; document.documentElement.dataset.avatars = 'on'; } document.documentElement.dataset.rail = document.documentElement.dataset.bubble === 'side' && innerWidth > 1100 ? 'wide' : 'compact';</script>
+  <title>Agent Control Center</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/logo/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/logo-32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="/assets/logo/logo-64.png">
+  <link rel="apple-touch-icon" href="/assets/logo/logo-180.png">
+  <script type="module" src="/app.ts"></script>
+</head>
+<body>
+  <a class="skip-link" href="#prompt">跳到输入框</a>
+  <header class="control-bar" aria-label="引擎快捷切换">
+    <div class="control-brand" title="Agent Control Center"><img class="brand-logo" src="/assets/logo/logo-128.png" width="36" height="36" alt="" aria-hidden="true"><span>Agent Control Center</span></div>
+    <nav id="engine-dock" class="engine-dock" aria-label="快速切换引擎"><span class="quiet-state">正在连接引擎…</span></nav>
+    <button class="dock-add" id="add-engine" aria-label="添加 Agent" title="添加 Agent" aria-haspopup="dialog"><i data-lucide="plus"></i><span>添加 Agent</span></button>
+    <div class="rail-foot">
+      <a class="icon-button" href="/tasks.html" title="全部任务" aria-label="全部任务"><i data-lucide="list-checks"></i></a>
+      <button type="button" class="icon-button rail-toggle" id="toggle-rail" aria-label="展开 Agent 栏" title="展开 Agent 栏" aria-pressed="false"><i data-lucide="chevrons-right"></i></button>
+      <button type="button" class="icon-button" id="open-settings" aria-label="设置" title="设置" aria-haspopup="dialog"><i data-lucide="settings"></i></button>
+      <button type="button" class="user-chip" id="open-profile" aria-label="我的" title="我的" aria-haspopup="listbox" aria-expanded="false"><span class="user-avatar" id="user-avatar"></span></button>
+    </div>
+  </header>
+  <div class="app-shell">
+  <button class="sidebar-scrim" id="sidebar-scrim" aria-label="关闭会话列表" hidden></button>
+  <aside class="sidebar" id="sidebar" aria-label="会话导航">
+    <div class="sidebar-head">
+      <span class="sidebar-face" id="sidebar-face" aria-hidden="true"></span>
+      <div class="sidebar-title"><span class="sidebar-agent" id="sidebar-agent"></span><div class="space-switch-row" id="space-switch" hidden></div><span class="count-chip" id="session-count" title="聊天数">0</span></div>
+      <button class="icon-button" id="refresh" aria-label="刷新会话" title="刷新会话"><i data-lucide="refresh-cw"></i></button>
+      <button class="icon-button mobile-only" id="close-sidebar" aria-label="关闭侧栏"><i data-lucide="panel-left-close"></i></button>
+    </div>
+    <div class="sidebar-tools">
+      <button class="new-chat" id="new-chat" aria-keyshortcuts="Meta+Shift+O Control+Shift+O"><i data-lucide="square-pen"></i><span>新建聊天</span><kbd data-keys="mod+shift+O">⌘⇧O</kbd></button>
+      <label class="search"><i data-lucide="search"></i><input type="search" id="session-search" placeholder="搜索聊天" aria-label="搜索聊天"><kbd data-keys="mod+K">⌘K</kbd></label>
+    </div>
+    <nav class="session-list" id="session-list" aria-label="聊天列表"><p class="quiet-state">正在读取会话…</p></nav>
+    <div class="sidebar-resize" id="sidebar-resize" role="separator" aria-orientation="vertical" aria-label="拖动调整会话列表宽度，双击恢复默认" tabindex="0"></div>
+  </aside>
+  <main class="workspace" id="workspace">
+    <header class="chat-header">
+      <button class="icon-button" id="toggle-sidebar" aria-label="切换会话列表" aria-expanded="true"><i data-lucide="panel-left"></i></button>
+      <div class="header-context"><h1 id="session-title">新建聊天</h1><span id="session-cwd" class="cwd"></span></div>
+      <span id="engine-label" class="sr-only"></span><span id="session-sync" class="session-sync" role="status"></span>
+      <button class="desktop-button" id="show-desktop" aria-label="在桌面端打开这个会话" title="在桌面端打开这个会话" hidden><i data-lucide="app-window"></i><span id="show-desktop-label"></span><i data-lucide="arrow-up-right"></i></button>
+      <span class="header-tools">
+        <button class="icon-button" id="session-info" aria-label="查看会话信息" title="查看会话信息"><i data-lucide="info"></i></button>
+        <button class="icon-button" id="toggle-panel" aria-label="打开侧边栏" aria-expanded="false" aria-controls="side-panel" title="侧边栏（⌘ \\）"><i data-lucide="panel-right"></i></button>
+      </span>
+    </header>
+    <div class="notice" id="notice" role="alert" hidden><span id="notice-text"></span><button class="icon-button" id="dismiss-notice" aria-label="关闭提示"><i data-lucide="x"></i></button></div>
+    <section class="conversation" id="conversation" aria-label="聊天内容" tabindex="0">
+      <div class="timeline" id="timeline"></div>
+    </section>
+    <div class="composer-area">
+      <button class="jump-button" id="jump-bottom" aria-label="回到最新消息" title="回到最新消息" hidden><i data-lucide="arrow-down"></i></button>
+      <div class="run-state" id="run-state" role="status" aria-live="polite"></div>
+      <div class="send-blocked" id="send-blocked" role="note" hidden><i data-lucide="monitor-smartphone" aria-hidden="true"></i><span id="send-blocked-text"></span></div>
+      <form class="composer" id="composer">
+        <div class="queue-strip" id="queue-list" aria-label="排队中的消息" hidden></div>
+        <div class="attachment-strip" id="attachments" aria-label="待发送附件" hidden></div>
+        <label class="sr-only" for="prompt">发送消息</label>
+        <textarea id="prompt" rows="2" placeholder="给当前引擎发送任务或后续指令…"></textarea>
+        <div class="composer-toolbar">
+          <div class="composer-options">
+            <button type="button" class="icon-button" id="attach" aria-label="添加文件，或引用另一个聊天" title="添加文件，或引用另一个聊天" aria-haspopup="listbox" aria-expanded="false"><i data-lucide="plus"></i></button>
+            <button type="button" class="icon-button mic-button" id="dictate" aria-label="语音输入" aria-pressed="false" title="语音输入"><i data-lucide="mic"></i><span class="mic-level" aria-hidden="true"></span></button>
+            <label class="sr-only" for="model">模型</label><select id="model" class="subtle-select"><option value="">桌面端默认模型</option></select>
+            <label class="sr-only" for="effort">推理强度</label><select id="effort" class="subtle-select" hidden></select>
+            <label class="sr-only" for="permission">权限模式</label><select id="permission" class="subtle-select" hidden></select>
+          </div>
+          <button type="submit" class="send-button" id="send" aria-label="发送消息" disabled><i data-lucide="arrow-up"></i></button>
+          <button type="button" class="queue-button" id="queue" aria-label="排队，这一轮结束后发送" title="排队：这一轮结束后发送（Tab）" hidden><i data-lucide="list-plus"></i></button>
+          <button type="button" class="send-button" id="stop" aria-label="停止任务" hidden><i data-lucide="square"></i></button>
+        </div>
+      </form>
+      <div class="new-target-row" id="new-target-row" hidden>
+        <button type="button" class="new-target" id="new-target" aria-haspopup="listbox" aria-expanded="false" aria-label="新聊天所在的项目"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span id="new-target-name"></span><svg class="new-target-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
+        <input id="new-target-path" class="new-target-path" placeholder="文件夹的完整路径，回车确认" aria-label="新聊天的工作文件夹路径" autocomplete="off" spellcheck="false" hidden>
+      </div>
+      <div class="composer-caption"><span id="composer-context">任务在对应桌面引擎中执行</span><span>Enter 发送 · Shift Enter 换行</span></div>
+    </div>
+    <div class="drop-zone" id="drop-zone" hidden>松开以添加附件</div>
+  </main>
+  <aside class="side-panel" id="side-panel" aria-label="文件预览" hidden>
+    <div class="side-resize" id="side-resize" role="separator" aria-orientation="vertical" aria-label="拖动调整侧边栏宽度" tabindex="0"></div>
+    <div class="side-head">
+      <div class="side-tabs" id="side-tabs" role="tablist" aria-label="打开的文件"></div>
+      <div class="side-actions">
+        <button class="icon-button" id="side-mode" hidden aria-label="查看源码" title="查看源码"><i data-lucide="code"></i></button>
+        <span class="side-file-actions" id="side-file-actions"></span>
+        <button class="icon-button" id="side-copy" hidden aria-label="复制路径" title="复制路径"><i data-lucide="copy"></i></button>
+        <button class="icon-button" id="side-close" aria-label="关闭侧边栏" title="关闭侧边栏"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <p class="side-meta" id="side-meta"></p>
+    <div class="side-body" id="side-body" tabindex="0"></div>
+  </aside>
+  </div>
+  <input type="file" id="file-input" multiple hidden>
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-heading"><h2 id="settings-title">设置</h2><button class="icon-button" id="close-settings" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <div id="settings-content"></div>
+  </dialog>
+  <dialog id="agents-dialog" class="settings-dialog agents-dialog" aria-labelledby="agents-title">
+    <div class="dialog-heading"><h2 id="agents-title">添加 Agent</h2><button class="icon-button" id="close-agents" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <p class="dialog-description">打开开关，这个 Agent 就接上它的桌面版，出现在 Agent 栏里。关掉只是把它从工作台拿走，桌面版和里面的聊天不受影响。</p>
+    <div id="agents-content"></div>
+  </dialog>
+  <dialog id="usage-dialog" class="settings-dialog" aria-labelledby="usage-title">
+    <div class="dialog-heading"><h2 id="usage-title">额度</h2><button class="icon-button" id="close-usage" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <div id="usage-content"></div>
+    <p class="field-help">显示引擎实际返回的剩余额度与重置时间，自动更新；未提供数据的引擎以原客户端为准</p>
+  </dialog>
+  <dialog id="onboard-dialog" class="onboard-dialog" aria-labelledby="onboard-title">
+    <div class="dialog-heading"><h2 id="onboard-title">接入新的桌面 AI</h2><button class="icon-button" id="close-onboard" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <p class="dialog-description">把下面这段话发给你的桌面版 AI（Claude、Codex、Antigravity 或其他）。它会复用工作台现成的页面和能力，只接自己的数据、选好把消息送进它桌面版的通道。</p>
+    <ol class="onboard-steps">
+      <li><span>1</span>读工作台的接入手册</li>
+      <li><span>2</span>选好进桌面版的通道</li>
+      <li><span>3</span>分阶段接数据、补能力</li>
+      <li><span>4</span>真实走一遍后交付</li>
+    </ol>
+    <pre class="onboard-prompt" id="onboard-prompt" tabindex="0" aria-label="提示词"></pre>
+    <p class="field-help" id="onboard-path"></p>
+    <div class="dialog-actions"><button type="button" class="secondary-button" id="copy-skill-path">复制手册路径</button><button type="button" class="primary-button" id="copy-onboard">复制提示词</button></div>
+  </dialog>
+  <dialog id="focus-dialog" class="settings-dialog focus-dialog" aria-labelledby="focus-title">
+    <div class="dialog-heading"><h2 id="focus-title">在 Windows 上代发消息</h2><button class="icon-button" id="close-focus" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <p class="dialog-description">Windows 不允许程序在后台按桌面版的按钮而不让它拿到焦点。所以工作台经过桌面版的窗口代发一条消息时，那个窗口会短暂拿走焦点几次，每次不到 0.1 秒。</p>
+    <ul class="focus-notes">
+      <li>这时你如果在别的程序里打字，正在拼的字可能会被打断。在工作台里打字时，它会等你停顿再动手。</li>
+      <li>改模型或推理强度时，大约半秒内你打的字会进到桌面版里。</li>
+      <li>前台的程序独占全屏时，消息会等你离开它再发。</li>
+    </ul>
+    <div class="dialog-actions"><a class="secondary-button" href="https://github.com/Phz-06/agent-frontdesk/blob/main/docs/windows.md" target="_blank" rel="noopener">了解详情</a><button type="button" class="primary-button" id="focus-ok">知道了</button></div>
+  </dialog>
+  <dialog id="image-viewer" class="image-viewer" aria-label="查看图片"><img id="image-viewer-img" alt=""><div class="image-viewer-actions"><a class="icon-button" id="image-viewer-open" target="_blank" rel="noopener" aria-label="在新标签页打开原图" title="在新标签页打开原图"><i data-lucide="external-link"></i></a><button class="icon-button" id="close-image-viewer" aria-label="关闭"><i data-lucide="x"></i></button></div></dialog>
+  <dialog id="reference-dialog" class="settings-dialog reference-dialog" aria-labelledby="reference-title">
+    <div class="dialog-heading"><h2 id="reference-title">引用另一个聊天</h2><button class="icon-button" id="close-reference" aria-label="关闭"><i data-lucide="x"></i></button></div>
+    <p class="dialog-description">选一个聊天，工作台把它整理好附在这条消息上（不收附件的 Agent 会直接放进输入框）。不含思考过程和工具输出，聊天太长时较早的轮次会精简。</p>
+    <label class="search"><i data-lucide="search"></i><input type="search" id="reference-search" placeholder="搜索所有 Agent 的聊天" aria-label="搜索所有 Agent 的聊天" autocomplete="off"></label>
+    <p class="reference-error" id="reference-error" role="alert" hidden></p>
+    <div class="reference-list" id="reference-list"></div>
+  </dialog>
+  <dialog id="info-dialog" aria-labelledby="info-title"><div class="dialog-heading"><h2 id="info-title">会话信息</h2><button class="icon-button" id="close-info" aria-label="关闭"><i data-lucide="x"></i></button></div><div id="info-content"></div></dialog>
+</body>
+</html>

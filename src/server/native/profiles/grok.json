@@ -1,0 +1,30 @@
+{
+  "name": "Grok Bot",
+  "bundleId": "com.anysphere.sand",
+  "refreshAnchors": ["grokHistory", "grokUsagePane"],
+  "weeklyLabels": ["每周用量", "weekly usage"],
+  "resetWords": ["后重置", "resets "],
+  "workingLabels": ["grok bot 正在工作", "grok bot is working"],
+  "stopButtons": ["停止", "停止生成", "Stop", "Stop generating"],
+  "userLabels": ["你", "You"],
+  "offlineLabels": ["正在显示已保存的消息", "Showing saved messages", "You're offline with Grok Bot", "你已与 Grok Bot 断开连接"],
+  "locators": {
+    "grokSidebar": [{ "name": "Bot 列表" }, { "name": "Bot list" }],
+    "grokChatRows": [{ "role": "AXButton", "inside": "grokSidebar" }],
+    "grokComposer": [{ "role": "AXTextArea", "class": "sand-prompt-field" }],
+    "grokHeading": [{ "role": "AXHeading", "id": "sand-conversation-heading" }],
+    "grokSend": [{ "role": "AXButton", "name": "发送" }, { "role": "AXButton", "name": "发送消息" }, { "role": "AXButton", "name": "Send" }, { "role": "AXButton", "name": "Send message" }],
+    "grokHistory": [
+      { "name": "对话记录" },
+      { "name": "Conversation history" }
+    ],
+    "grokUsagePane": [
+      { "role": "AXButton", "name": "用量与账单" },
+      { "role": "AXButton", "name": "Usage & Billing" }
+    ],
+    "grokSettingsClose": [
+      { "role": "AXButton", "name": "关闭对话框" },
+      { "role": "AXButton", "name": "Close dialog" }
+    ]
+  }
+}

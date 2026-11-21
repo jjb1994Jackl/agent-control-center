@@ -1,0 +1,255 @@
+{
+  "name": "Codex 桌面版",
+  "bundleId": "com.openai.codex",
+  "windows": {
+    "exe": "ChatGPT.exe",
+    "locators": {
+      "fileCard": {
+        "role": "AXGroup",
+        "class": "group/turn-diff-header"
+      }
+    }
+  },
+  "offscreenMenu": "press",
+  "accessibilitySwitches": [
+    "AXManualAccessibility",
+    "AXEnhancedUserInterface"
+  ],
+  "blankTitles": [
+    "ChatGPT",
+    "Codex"
+  ],
+  "refreshAnchors": [
+    "composer"
+  ],
+  "sendSlot": "composerMain",
+  "projectPrefix": "Change project: ",
+  "selectModelItem": "Select model",
+  "effortItem": "Power",
+  "effortNames": {
+    "low": "Light",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "Extra High",
+    "ultra": "Ultra"
+  },
+  "effortOrder": [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "ultra"
+  ],
+  "menuSigns": {
+    "modelMenu": {
+      "role": "AXMenuItem",
+      "class": "ViewToggle-*"
+    }
+  },
+  "locators": {
+    "sidebar": {
+      "role": "AXGroup",
+      "id": "app-shell-sidebar"
+    },
+    "sidebarHeader": {
+      "role": "AXGroup",
+      "class": "header-*",
+      "inside": "sidebar"
+    },
+    "composerBody": {
+      "role": "AXGroup",
+      "class": "ComposerLayoutBody-*"
+    },
+    "projectSlot": {
+      "role": "AXGroup",
+      "class": "ClearableSelectorTrigger-*"
+    },
+    "composer": {
+      "role": "AXTextArea"
+    },
+    "send": {
+      "role": "AXButton",
+      "name": "Send"
+    },
+    "stop": {
+      "role": "AXButton",
+      "prefix": "Stop"
+    },
+    "newChat": [
+      {
+        "role": "AXButton",
+        "class": "sidebar-item",
+        "inside": "sidebarHeader"
+      },
+      {
+        "role": "AXButton",
+        "name": "New chat",
+        "inside": "sidebarHeader"
+      }
+    ],
+    "projectMenu": [
+      {
+        "role": "AXPopUpButton",
+        "prefix": "Change project"
+      },
+      {
+        "role": "AXPopUpButton",
+        "inside": "projectSlot"
+      }
+    ],
+    "noProject": [
+      {
+        "role": "AXButton",
+        "class": "ClearableSelectorTriggerClearButton-*"
+      },
+      {
+        "role": "AXButton",
+        "contains": "work in a project"
+      }
+    ],
+    "projectList": [
+      {
+        "role": "AXList",
+        "class": "comboboxList-*"
+      },
+      {
+        "role": "AXList",
+        "name": "Suggestions"
+      }
+    ],
+    "permissionsMenu": [
+      {
+        "role": "AXPopUpButton",
+        "name": "Change permissions"
+      },
+      {
+        "role": "AXPopUpButton",
+        "inside": "composerBody",
+        "index": 0
+      }
+    ],
+    "modelMenu": [
+      {
+        "role": "AXPopUpButton",
+        "after": "permissionsMenu"
+      },
+      {
+        "role": "AXPopUpButton",
+        "inside": "composerBody",
+        "index": 1
+      }
+    ],
+    "projectChooser": {
+      "roles": [
+        "AXPopUpButton",
+        "AXButton"
+      ],
+      "name": "Choose project"
+    },
+    "modeSwitch": [
+      {
+        "role": "AXPopUpButton",
+        "prefix": "Switch mode, current mode: "
+      },
+      {
+        "role": "AXPopUpButton",
+        "inside": "sidebarHeader",
+        "index": 0
+      }
+    ],
+    "chatComposer": {
+      "role": "AXTextArea",
+      "named": true
+    },
+    "composerMain": {
+      "role": "AXButton",
+      "class": [
+        "size-token-button-composer",
+        "bg-composer-primary"
+      ],
+      "inside": "composerBody"
+    },
+    "selectModelRow": [
+      {
+        "role": "AXMenuItem",
+        "class": "ViewToggle-*"
+      },
+      {
+        "role": "AXMenuItem",
+        "name": "Select model"
+      }
+    ],
+    "effortRow": [
+      {
+        "role": "AXMenuItem",
+        "keys": "ArrowLeft ArrowRight"
+      },
+      {
+        "role": "AXMenuItem",
+        "name": "Power"
+      }
+    ]
+  },
+  "effortSteps": {
+    "Medium": "Standard",
+    "High": "Extended"
+  },
+  "spaces": {
+    "kind": "menu",
+    "control": "modeSwitch",
+    "currentPrefix": "Switch mode, current mode: ",
+    "names": {
+      "chatgpt": "ChatGPT",
+      "codex": "Codex"
+    },
+    "home": "codex"
+  },
+  "chatRead": {
+    "container": [
+      {
+        "role": "AXGroup",
+        "class": "transcriptContent-*"
+      },
+      {
+        "role": "AXGroup",
+        "name": "Conversation"
+      }
+    ],
+    "speakers": {
+      "You said:": "user",
+      "ChatGPT said:": "assistant"
+    },
+    "speakerHeading": {
+      "role": "AXHeading",
+      "class": "sr-only"
+    },
+    "userMessage": {
+      "role": "AXGroup",
+      "class": "bg-user-message"
+    },
+    "skip": {
+      "role": "AXGroup",
+      "class": "text-codex-description"
+    },
+    "ignore": [
+      "ChatGPT can make mistakes",
+      "Latest response"
+    ]
+  },
+  "chatSend": {
+    "composer": "chatComposer",
+    "send": "send",
+    "stop": "stop",
+    "newChat": "newChat",
+    "inProject": "projectMenu",
+    "noProject": "noProject",
+    "project": [
+      "New chat in {project}",
+      "Start new chat in {project}"
+    ],
+    "projectShown": {
+      "role": "AXPopUpButton",
+      "name": "Change project: {project}"
+    }
+  }
+}

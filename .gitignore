@@ -1,0 +1,32 @@
+node_modules/
+uploads/
+# Chats written out as Markdown for another agent to read (they are real chats)
+exports/
+.DS_Store
+.certs/
+# What the person chose in the console (which agents are switched on)
+.frontdesk.json
+
+# Local design-review captures of real chats, local tooling
+.taste-skill/
+.claude/settings.local.json
+
+# Raw desktop screenshots made while restoring a skin (they contain real chats)
+docs/skins/*/source/*.png
+docs/skins/*/source/*.jpg
+
+# Build output (npm run build)
+dist/
+
+# Pictures the person uploaded for an agent's face in the console's settings
+.frontdesk-avatars/
+
+# Local environment files
+.env
+.env.*
+
+# Personal agent instructions
+CLAUDE.local.md
+
+# Windows probe output (window and page facts of the person's own apps)
+probes/windows/out/

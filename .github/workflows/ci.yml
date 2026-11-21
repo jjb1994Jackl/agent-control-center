@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # The macOS helper (Swift) is compiled by the tests that read it; macOS paths and tools.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+
+  windows:
+    # The same checks on Windows. The window helper (uia-driver.cs with each engine's flow) is
+    # compiled there with the csc.exe that ships with Windows and asked only `check`
+    # (test/core.test.ts); no desktop app is driven. test/platform.test.ts holds the rule that no
+    # flow sends input or moves a window itself.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test

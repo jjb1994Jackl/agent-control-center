@@ -1,0 +1,16 @@
+name: Agent request
+description: Suggest a desktop agent to connect
+labels: [agent request]
+body:
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and desktop app
+      placeholder: Name, link, platform
+    validations:
+      required: true
+  - type: textarea
+    id: channels
+    attributes:
+      label: What you know about how it could be reached
+      description: Local session files, a local server or CLI protocol, deep links. Leave empty if you do not know.

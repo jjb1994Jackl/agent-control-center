@@ -1,0 +1,30 @@
+{
+  "waitSeconds": 15,
+  "guard": {
+    "engine": "claude"
+  },
+  "steps": [
+    {
+      "label": "claude send on desktop 2: Invoke on Send",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "send",
+        "--do",
+        "invoke"
+      ],
+      "pauseMs": 3000
+    },
+    {
+      "label": "claude read: the composer after",
+      "engine": "claude",
+      "args": [
+        "--locator",
+        "composer",
+        "--do",
+        "inspect"
+      ],
+      "pauseMs": 2000
+    }
+  ]
+}

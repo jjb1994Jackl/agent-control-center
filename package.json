@@ -1,0 +1,70 @@
+{
+  "name": "agent-frontdesk",
+  "version": "0.3.1",
+  "private": true,
+  "description": "One web page for every desktop AI on your computer. Works with Codex, Claude and Antigravity today, and any other desktop AI can connect itself from a single prompt.",
+  "homepage": "https://github.com/Phz-06/agent-frontdesk#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Phz-06/agent-frontdesk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Phz-06/agent-frontdesk/issues"
+  },
+  "main": "dist/server/server.js",
+  "scripts": {
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "start": "npm run build && node scripts/start-local.mjs",
+    "dev": "concurrently -k -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node scripts/dev-server.mjs",
+    "dev:web": "vite",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json && tsc -p tsconfig.test.json",
+    "check": "npm run typecheck && npm run build"
+  },
+  "keywords": [
+    "ai-agents",
+    "coding-agent",
+    "agent-ui",
+    "web-ui",
+    "dashboard",
+    "codex",
+    "chatgpt",
+    "claude",
+    "claude-code",
+    "antigravity",
+    "gemini",
+    "macos",
+    "accessibility",
+    "local-first",
+    "typescript"
+  ],
+  "author": "Phz-06",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@fontsource/inter": "5.2.5",
+    "@highlightjs/cdn-assets": "11.11.1",
+    "compression": "1.8.2",
+    "dompurify": "3.4.17",
+    "express": "^5.3.0",
+    "katex": "0.16.47",
+    "lucide": "0.468.0",
+    "marked": "15.0.12",
+    "mermaid": "^11.17.2",
+    "multer": "^2.5.0"
+  },
+  "engines": {
+    "node": ">=22.16"
+  },
+  "devDependencies": {
+    "@types/compression": "1.8.1",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.6",
+    "concurrently": "^10.0.7",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
