@@ -42,6 +42,18 @@ func grokOpen(_ title: String, activate: Bool) -> Bool {
   wait(0.25)
   return grokChatDrawn(title)
 }
+func grokIsWorkingText(_ text: String) -> Bool {
+  let lower = text.lowercased()
+  if settings("workingLabels").contains(lower) { return true }
+  return lower.count <= 80 && settings("workingSuffixes").contains { lower.count > $0.count && lower.hasSuffix($0) }
+}
+func grokClearOwnDraft(_ expected: String, _ normalize: (String) -> String) {
+  guard let editor = find("grokComposer"), holdsText(editor) else { return }
+  let current = normalize(value(editor))
+  if current == expected || expected.hasPrefix(current) {
+    setValue(editor, "")
+  }
+}
 func grokOffline() -> Bool {
   let labels = Set(settings("offlineLabels"))
   return first { role($0) == "AXStaticText" && labels.contains(grokText($0)) } != nil
@@ -157,7 +169,7 @@ case "grok-chat-read", "grok-chat-peek":
     fail("wrong_chat", "无法确认所选 Grok 会话，请刷新会话列表")
   }
   let canStop = grokStopControl(title) != nil
-  let working = grokChatPane(title).map { pane in within(pane) { role($0) == "AXStaticText" && settings("workingLabels").contains(grokText($0).lowercased()) }.first != nil } ?? false
+  let working = grokChatPane(title).map { pane in within(pane) { role($0) == "AXStaticText" && grokIsWorkingText(grokText($0)) }.first != nil } ?? false
   out(["ok": true, "messages": grokChatMessages(), "offline": grokOffline(), "running": canStop || working, "canStop": canStop])
 case "grok-chat-stop":
   struct GrokStopInput: Decodable { let title: String; let prompt: String }
@@ -193,6 +205,7 @@ case "grok-chat-send":
   }
   guard until(2, { find("grokComposer").map { normalize(value($0)) == expected } == true && find("grokSend") != nil }),
         grokOpen(input.title, activate: false), !grokOffline(), let send = find("grokSend") else {
+    grokClearOwnDraft(expected, normalize)
     fail("no_send", "无法确认 Grok 原应用的输入内容，消息未发出")
   }
   let pressed = act(send, kAXPressAction as String)
@@ -212,8 +225,7 @@ case "receipts":
   guard grokPrimaryChat() != nil else { fail("no_primary", "请保持 Grok Bot 的主对话打开以同步回传") }
   // Never read a partial message as a final receipt while the Bot is still writing.
   let busy = first { e in
-    let status = grokText(e).lowercased()
-    return settings("workingLabels").contains(status)
+    grokIsWorkingText(grokText(e))
       || (role(e) == "AXButton" && settings("stopButtons").contains(name(e)))
   } != nil
   out(["ok": true, "messages": busy ? [] : grokMessages(ids)])

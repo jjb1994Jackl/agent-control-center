@@ -1,15 +1,15 @@
 {
-  "name": "agent-frontdesk",
-  "version": "0.3.1",
+  "name": "agent-control-center",
+  "version": "0.1.0-preview.5",
   "private": true,
-  "description": "One web page for every desktop AI on your computer. Works with Codex, Claude and Antigravity today, and any other desktop AI can connect itself from a single prompt.",
-  "homepage": "https://github.com/Phz-06/agent-frontdesk#readme",
+  "description": "Local macOS workbench and overview for desktop AI agents (Codex, Antigravity, Grok Bot, Claude). Tasks run inside each agent's own app with its own account, model and permissions.",
+  "homepage": "https://github.com/jjb1994Jackl/agent-control-center#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Phz-06/agent-frontdesk.git"
+    "url": "git+https://github.com/jjb1994Jackl/agent-control-center.git"
   },
   "bugs": {
-    "url": "https://github.com/Phz-06/agent-frontdesk/issues"
+    "url": "https://github.com/jjb1994Jackl/agent-control-center/issues"
   },
   "main": "dist/server/server.js",
   "scripts": {
@@ -34,12 +34,13 @@
     "claude-code",
     "antigravity",
     "gemini",
+    "grok",
     "macos",
     "accessibility",
     "local-first",
     "typescript"
   ],
-  "author": "Phz-06",
+  "author": "jjb1994Jackl (built on Agent Frontdesk by Phz-06)",
   "license": "MIT",
   "type": "module",
   "dependencies": {

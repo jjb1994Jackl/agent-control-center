@@ -550,3 +550,69 @@ test('the Windows helper is compiled with the csc.exe Windows ships and speaks t
     }
   }
 });
+
+test('emptying a paused queue clears the pause so future queued messages still drain', async () => {
+  const host = new PluginHost(), hub = new EventHub(), sent: string[] = [];
+  let emitter: EngineEvents | undefined;
+  host.register({
+    ...provider('q'),
+    read: async () => busyHistory('idle'),
+    send(_id, input) { sent.push(input.prompt); emitter = new EngineEvents(); return emitter; },
+    interrupt: async () => { must(emitter).emit('interrupt'); return {}; },
+  });
+  const runs = new RunService(host, hub);
+  runs.start('q', 's1', { prompt: 'first', attachments: [] });
+  await tick();
+  const queued = runs.enqueue('q', 's1', { prompt: 'second', attachments: [] });
+  await runs.interrupt('q', 's1');
+  assert.equal(runs.queuePaused('q', 's1'), true);
+  runs.dequeue('q', 's1', queued.id);
+  assert.equal(runs.queuePaused('q', 's1'), false);
+  runs.enqueue('q', 's1', { prompt: 'third', attachments: [] });
+  for (let i = 0; i < 40 && sent.length < 2; i++) await new Promise(resolve => setTimeout(resolve, 10));
+  assert.deepEqual(sent, ['first', 'third']);
+  runs.dispose();
+});
+
+test('a failed interrupt rolls back the automatic queue pause', async () => {
+  const host = new PluginHost(), hub = new EventHub();
+  host.register({
+    ...provider('failstop'),
+    read: async () => busyHistory('busy'),
+    interrupt: async () => { throw Object.assign(new Error('no stop button'), { status: 409 }); },
+  });
+  const runs = new RunService(host, hub);
+  runs.start('failstop', 's1', { prompt: 'first', attachments: [] });
+  await tick();
+  runs.enqueue('failstop', 's1', { prompt: 'second', attachments: [] });
+  assert.equal(runs.queuePaused('failstop', 's1'), false);
+  await assert.rejects(() => runs.interrupt('failstop', 's1'), /no stop button/);
+  assert.equal(runs.queuePaused('failstop', 's1'), false);
+  runs.dispose();
+});
+
+test('ActivityFeed tracks cross-session approval waiting and queue pause states', async () => {
+  const { ActivityFeed } = await import('../src/server/services/activity-feed.js');
+  const host = new PluginHost(), hub = new EventHub();
+  const engine = provider('feed');
+  host.register({ ...engine, read: async () => busyHistory('busy') });
+  const runs = new RunService(host, hub);
+  const feed = new ActivityFeed(host, hub, runs, { intervalMs: 60000 });
+  try {
+    runs.start('feed', 's1', { prompt: 'first', attachments: [] });
+    await tick();
+    must(engine.emitter).emit('approval', { id: 'ap1', title: 'Confirm', decisions: ['allow'] });
+    runs.enqueue('feed', 's1', { prompt: 'next', attachments: [] });
+    runs.pauseQueue('feed', 's1', true);
+    const entry = () => feed.snapshot().sessions.find(item => item.engine === 'feed' && item.sessionId === 's1');
+    assert.equal(entry()?.waiting, true);
+    assert.equal(entry()?.queuePaused, true);
+    must(engine.emitter).emit('approval_resolved', { id: 'ap1' });
+    runs.pauseQueue('feed', 's1', false);
+    assert.equal(entry()?.waiting, false);
+    assert.equal(entry()?.queuePaused, false);
+  } finally {
+    feed.dispose();
+    runs.dispose();
+  }
+});

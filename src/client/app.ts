@@ -415,23 +415,24 @@ function renderSessionList() {
   const spaces = spacesOf(engine()), shown = spaceId(), mode = space();
   setHTML($('space-switch'), renderSpaceSwitch(spaces, shown, { label: t('{name} 的模式', { name: engine()?.label || '' }) }));
   $('space-switch').hidden = !spaces.length; $('sidebar-agent').hidden = !!spaces.length;
+  const loaded = Object.hasOwn(state.sessions, state.engine);
   const sessions = inSpace(state.sessions[state.engine] || [], spaces, shown).filter(item => `${item.title} ${item.cwd} ${item.metadata?.group?.name || ''}`.toLocaleLowerCase().includes(query));
-  $('session-count').textContent = String(sessions.length);
+  $('session-count').textContent = loaded ? String(sessions.length) : '…';
   const error = state.refreshErrors[state.engine] || (mode?.unavailable && !sessions.length ? mode.unavailable : ''), projects = inSpace(state.projects[state.engine] || [], spaces, shown);
   // A chat has news when it finished or said something since it was last opened here, or when the
   // desktop marks it for a look (metadata.attention) and it has not been opened here since.
   const status = (item: PageSession) => {
     const activity = activityFor(state.engine, item.id), flagged = !!item.metadata?.attention && markers.unread({ engine: state.engine, sessionId: item.id, completedAt: Date.parse(String(item.updatedAt)) || 0 });
     const active = item.id === state.session?.id ? state.store.active : undefined;
-    return { running: !!active || (activity ? activity.running : item.status === 'busy'), waiting: !!active?.approvals.length,
-      paused: item.id === state.session?.id && state.store.queuePaused,
+    return { running: !!active || (activity ? activity.running : item.status === 'busy'), waiting: !!active?.approvals.length || !!activity?.waiting,
+      paused: item.id === state.session?.id ? state.store.queuePaused : !!activity?.queuePaused,
       unread: !!(activity && markers.unread(activity)) || flagged, draft: !!drafts.get(viewKey(state.engine, item.id)).text };
   };
   const renderDefault = () => renderSidebar(sessions, { projects, engineId: state.engine, space: shown, currentId: state.session?.id || '', query, status, time: item => relativeTime(item.updatedAt), prefs: sidePrefs, newChat: projectPlus() });
   const skinList = renderers.get(`session-list:${state.engine}`) || renderers.get('session-list:kit');
   const markup = sessions.length || (!query && projects.length)
     ? (skinList ? skinList(sessions, { currentId: state.session?.id, query, escape, icon, relativeTime, provider: engine(), status, projects, renderDefault }) : renderDefault())
-    : `<p class="quiet-state">${escape(say(error) || (query ? t('没有匹配的聊天') : t('还没有聊天，从新建聊天开始')))}</p>`;
+    : `<p class="quiet-state">${escape(say(error) || (!loaded && !query ? t('正在读取会话…') : query ? t('没有匹配的聊天') : t('还没有聊天，从新建聊天开始')))}</p>`;
   if (markup === listMarkup) return;
   const focused = closest(document.activeElement, '#session-list [data-session], #session-list [data-project-toggle], #session-list [data-project-new], #session-list [data-side-more]');
   const key = focused && ['session', 'projectToggle', 'projectNew', 'sideMore'].map(name => [name, focused.dataset[name]] as const).find(([, value]) => value != null);
@@ -687,7 +688,7 @@ function newChat(project: { id: string; name: string; cwd?: string | undefined }
 }
 function emptyView() {
   // No agent is switched on: the page offers the ones the console knows, each with its switch.
-  if (state.ready && !state.engines.length) return `<div class="empty-conversation agents-welcome"><img class="welcome-logo" src="/assets/logo/logo-128.png" width="56" height="56" alt=""><h2>${t('先接上一个 Agent')}</h2><p>${t('Agent Frontdesk 是桌面版 AI 的远程窗口。打开一个 Agent 的开关，就能在这里看它的聊天、给它发消息，任务仍由它的桌面版执行。')}</p><div id="welcome-agents">${agentsMarkup()}</div>${onboardEntry()}</div>`;
+  if (state.ready && !state.engines.length) return `<div class="empty-conversation agents-welcome"><img class="welcome-logo" src="/assets/logo/logo-128.png" width="56" height="56" alt=""><h2>${t('先接上一个 Agent')}</h2><p>${t('Agent Control Center 是桌面版 AI 的统一工作台。打开一个 Agent 的开关，就能在这里看它的聊天、给它发消息，任务仍由它的桌面版执行。')}</p><div id="welcome-agents">${agentsMarkup()}</div>${onboardEntry()}</div>`;
   // The agent's own character greets an empty chat, in every engine.
   const face = `<span class="empty-face">${character(engine() || {})}</span>`;
   if (!state.session) {
@@ -1492,7 +1493,7 @@ function onboardingPrompt() {
   if (language === 'en') return onboardingPromptEn();
   const dir = state.projectDir || '<工作台项目目录>', skill = skillPath(dir);
   const joined = state.engines.map(item => item.label).join('、') || '无';
-  return `你是我这台电脑上的桌面版 AI。请把你自己接入我本机的「Agent Frontdesk」统一工作台，做到和工作台里的 Claude、Codex 一样：我能在工作台里看你的历史、给你发消息、停止、插话、排队、改模型和推理强度、新建聊天、回答你的提问卡片、从聊天标题栏的「在 <你> 打开」一键回到你桌面版里的这个会话，而这一切都由你的桌面版自己执行，桌面版里实时看得到。
+  return `你是我这台电脑上的桌面版 AI。请把你自己接入我本机的「Agent Control Center」统一工作台，做到和工作台里的 Claude、Codex 一样：我能在工作台里看你的历史、给你发消息、停止、插话、排队、改模型和推理强度、新建聊天、回答你的提问卡片、从聊天标题栏的「在 <你> 打开」一键回到你桌面版里的这个会话，而这一切都由你的桌面版自己执行，桌面版里实时看得到。
 
 - 项目目录：${dir}
 - 工作台地址：${location.origin}（目前已接入：${joined}）
@@ -1515,14 +1516,14 @@ function onboardingPrompt() {
 
 如果工作台里已经有你（${joined}），这次按验收清单补齐缺的数据和能力。`;
 }
-// The same prompt for a person using Frontdesk in English; it points at the English guide.
+// The same prompt for a person using Agent Control Center in English; it points at the English guide.
 function onboardingPromptEn() {
-  const dir = state.projectDir || '<Frontdesk project folder>', skill = skillPath(dir);
+  const dir = state.projectDir || '<Agent Control Center project folder>', skill = skillPath(dir);
   const joined = state.engines.map(item => item.label).join(', ') || 'none';
-  return `You are the desktop AI on this computer. Please connect yourself to "Agent Frontdesk", the console on this machine, so that you can do everything Claude and Codex already do there: I can read your history in Frontdesk, send you messages, stop you, steer a running turn, queue messages, change the model and reasoning effort, start new chats, answer your question cards and jump from the chat header's "Open in <you>" to that very chat in your desktop app, while every bit of it is carried out by your own desktop app and shows up there live.
+  return `You are the desktop AI on this computer. Please connect yourself to "Agent Control Center", the console on this machine, so that you can do everything Claude and Codex already do there: I can read your history in the workbench, send you messages, stop you, steer a running turn, queue messages, change the model and reasoning effort, start new chats, answer your question cards and jump from the chat header's "Open in <you>" to that very chat in your desktop app, while every bit of it is carried out by your own desktop app and shows up there live.
 
 - Project folder: ${dir}
-- Frontdesk: ${location.origin} (connected so far: ${joined})
+- Workbench: ${location.origin} (connected so far: ${joined})
 - Guide (skill): ${skill}
 
 You do not build pages. The left sidebar of projects and chats, the right-hand file preview, the agent rail's character / speech bubble / quota, new chats and new chats in a project, code / maths / diagrams / tool calls / step lists / cards in replies, the model / reasoning effort / permission menus under the composer, and send / stop / steer / queue are all shared parts already. You do three things: connect your own data, read-only; pick, for each action, the channel that carries messages into your desktop app; and declare in your plugin what you can do.
@@ -1534,13 +1535,13 @@ Please:
 2. Find out your data on this machine (read-only, change nothing): session records, project membership and order, the native evidence for "running" and "ended", each session's model / reasoning effort / permissions, what step lists and question cards look like in the record.
 3. Pick the channels and put them in a table in docs/skins/<your engine id>/progress.md: which route sending, steering, stopping, changing settings, new chats, answering cards, opening the chat in your desktop app and opening files each take, with evidence. Every one must meet three conditions: the turn is run by your desktop app's own process, your desktop app shows the message right away as my own, and no one else's token is used. Prefer an interface your desktop process exposes (like Codex's app-server queue or Antigravity's language server), then the channel between your desktop's own windows (like Codex's IPC), and only then the shared accessibility driver (like Claude), writing only your steps and control names, never the actions again; that driver is Swift on macOS and UI Automation (C#) on Windows, with your steps written once for each (<your engine id>-desktop.swift / .cs), and what to mind on Windows is in the guide's channels section. Never start a separate CLI process to run the turn; when a channel cannot do something, do not send, and say why (a steer that cannot join falls back to the queue).
 4. Build in the guide's stages: read-only and visible → sending and live updates → stop, steer, queue → settings follow the message → new chats → cards and files → looking like yourself. Open the page and look after each stage.
-5. When I change the model / reasoning effort / permissions in Frontdesk, change it in your desktop app first, then send; if it cannot be changed, do not send. Do not add a read-only mode, and do not block sending because a session is running in the desktop app: I make sure I never write from both places at once.
+5. When I change the model / reasoning effort / permissions in the workbench, change it in your desktop app first, then send; if it cannot be changed, do not send. Do not add a read-only mode, and do not block sending because a session is running in the desktop app: I make sure I never write from both places at once.
 6. Do not read other programs' private tokens or keys; your own official CLI's sign-in credentials may be read on the server at the moment of use (for quota, say), but never in the page, logs, tests or files. Ask me first for anything that needs my authorization (macOS's Accessibility permission, for example). If your desktop app has its own speech-to-text, wire up dictate and dictationReady: the microphone gains one more source it can use.
 7. To look more like your desktop app, only fill in the plugin's look field and the kit's --kit-* variables, and register renderers for what only you have; do not copy the kit's styles or hard-code your name in shared code. Unless I explicitly ask for a one-to-one match, no screenshot comparison is needed.
 8. When done, run npm run build, npm test and npm run check (which includes the type check); all must pass; following step 4 of the guide, try it for real with the cheapest model (ask me first): send one message, change the model and send again, steer and stop a running turn, answer one card, press "Open in <you>" in the chat header once, and confirm all of it shows in your desktop app; go through the acceptance checklist item by item. Close any background processes you started before you finish.
-9. Finally tell me: which files you changed; the channel table; what works and what does not, and why; where the shared parts fell short and need a new extension point; what I still need to do (sign in, authorize, restart the Frontdesk server and switch you on under the rail's "+", delete test chats, for example).
+9. Finally tell me: which files you changed; the channel table; what works and what does not, and why; where the shared parts fell short and need a new extension point; what I still need to do (sign in, authorize, restart the Agent Control Center server and switch you on under the rail's "+", delete test chats, for example).
 
-If you are already in Frontdesk (${joined}), this time fill in the data and capabilities the acceptance checklist says are missing.`;
+If you are already in Agent Control Center (${joined}), this time fill in the data and capabilities the acceptance checklist says are missing.`;
 }
 // A wrap-up card's app button (commit, open a PR…), pressed on the desktop's own card in this chat.
 async function pressAction(action: CardAction): Promise<boolean> {

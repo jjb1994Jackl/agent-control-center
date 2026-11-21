@@ -657,6 +657,8 @@ export interface ActivityEntry {
   turnId?: string | null;
   title?: string;
   running: boolean;
+  waiting?: boolean;
+  queuePaused?: boolean;
   outcome?: string | null;
   startedAt?: number;
   completedAt?: number;

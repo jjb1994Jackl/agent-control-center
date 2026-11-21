@@ -109,7 +109,7 @@ export const setup: PluginSetup = ({ registerEngine }) => {
       }
       const turns = grokTurns(result['messages']), running = result['running'] === true;
       const turn = turns.at(-1);
-      if (running && turn?.id.startsWith('grok-msg-')) { turn.status = 'running'; turn.statusEvidence = 'desktop_page'; }
+      if (running && turn?.userPrompt) { turn.status = 'running'; turn.statusEvidence = 'desktop_page'; }
       const history = { session: { ...sessionOf(id, title, result['offline'] === true ? offline : '', running), capabilities: { interrupt: result['canStop'] === true && turn?.status === 'running' } }, turns };
       snapshots.set(id, history);
       if (snapshots.size > 24) snapshots.delete(snapshots.keys().next().value!);

@@ -148,7 +148,7 @@ async function install(args) {
   fs.mkdirSync(next);
   let replaced = false;
   try {
-    for (const file of ['package.json', 'package-lock.json', 'tsconfig.base.json', 'tsconfig.server.json', 'vite.config.ts', 'src', 'scripts', 'docs', 'skills', 'LICENSE'])
+    for (const file of ['package.json', 'package-lock.json', 'tsconfig.base.json', 'tsconfig.client.json', 'tsconfig.server.json', 'vite.config.ts', 'src', 'scripts', 'docs', 'skills', 'LICENSE'])
       fs.cpSync(path.join(root, file), path.join(next, file), { recursive: true });
     const npmOptions = { cwd: next, stdio: 'inherit', timeout: 600000 };
     run('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], npmOptions);
@@ -172,7 +172,7 @@ async function install(args) {
       load(login);
       await wait(port);
     } catch (error) {
-      await stop(port);
+      try { await stop(port); } catch {}
       if (replaced) fs.rmSync(runtime, { recursive: true, force: true });
       if (fs.existsSync(backup)) fs.renameSync(backup, runtime);
       for (const file of [startup, sessionOnly, receipt]) fs.rmSync(file, { force: true });

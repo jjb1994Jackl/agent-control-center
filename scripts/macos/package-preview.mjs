@@ -23,7 +23,19 @@ test/grok-chat.test.ts test/grok-receipts.test.ts test/task-board.test.ts`.split
 const tracked = execFileSync('git', ['ls-files', '-z', '--cached'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
 const include = /^(?:(?:src|docs|test|skills|examples|scripts|probes|\.github)\/|(?:README(?:\.zh-CN)?\.md|LICENSE|AGENTS\.md|CLAUDE\.md|SECURITY\.md|CONTRIBUTING\.md|package(?:-lock)?\.json|tsconfig\.[\w-]+\.json|vite\.config\.ts|(?:install|uninstall|doctor)\.sh|\.gitignore|\.gitattributes)$)/;
 const excluded = /^(?:docs\/images\/|docs\/skins\/[^/]+\/source\/|probes\/windows\/out\/)|(?:^|\/)(?:\.env(?:\.|$)|node_modules\/|logs\/)|\.(?:db|sqlite(?:3)?|jsonl|log|key|p12|pem|zip)$/i;
-const sensitive = new RegExp([`/Users/${os.userInfo().username}/`, '工作' + '协作', '视频' + '自动化', '-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----', ['gh', '[pousr]_[A-Za-z0-9]{30,}'].join('')].join('|'));
+const escapeRegex = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const extraTerms = [
+  ...(process.env.ACC_PRIVATE_TERMS || '').split(','),
+  ...(process.env.ACC_PRIVATE_TERMS_FILE && fs.existsSync(process.env.ACC_PRIVATE_TERMS_FILE)
+    ? fs.readFileSync(process.env.ACC_PRIVATE_TERMS_FILE, 'utf8').split(/\r?\n/)
+    : []),
+].map(item => item.trim()).filter(Boolean).map(escapeRegex);
+const sensitive = new RegExp([
+  escapeRegex(`/Users/${os.userInfo().username}/`),
+  ...extraTerms,
+  '-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----',
+  ['gh', '[pousr]_[A-Za-z0-9]{30,}'].join(''),
+].join('|'));
 const candidates = [...new Set([...tracked, ...additions])].filter(p => include.test(p) && !excluded.test(p)).sort();
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'acc-release-'));
 try {

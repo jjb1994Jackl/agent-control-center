@@ -70,3 +70,11 @@ test('a native chat is explicitly activated on selection and user messages do no
     await context.dispose();
   }
 });
+
+test('grok macOS helper compiles cleanly with draft cleanup and group working-label support', async () => {
+  if (process.platform !== 'darwin') return;
+  const { DesktopAutomation } = await import('../src/server/core/desktop-automation.js');
+  const ax = new DesktopAutomation({ engine: 'grok', label: 'Grok Bot' });
+  const bin = await ax.helper();
+  assert.ok(bin && bin.length > 0, 'grok Swift helper compiled');
+});

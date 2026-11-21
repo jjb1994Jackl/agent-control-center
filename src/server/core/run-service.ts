@@ -131,12 +131,14 @@ class RunService {
     if (index < 0) throw failure('这条排队消息已经发出或不存在', 409);
     const [item] = list.splice(index, 1);
     if (!item) throw failure('这条排队消息已经发出或不存在', 409);
-    if (!list.length) this.queues.delete(key);
+    const wasPaused = this.paused.has(key);
+    if (!list.length) { this.queues.delete(key); this.paused.delete(key); }
     this.publishQueue(engineId, id);
     try { return await this.deliver(engineId, id, item.input); }
     catch (err) {
       const back = this.queues.get(key) || [];
       back.splice(Math.min(index, back.length), 0, item); this.queues.set(key, back); this.hub.pinned.add(key);
+      if (wasPaused) this.paused.add(key);
       this.publishQueue(engineId, id);
       if (!this.active.has(key)) setTimeout(() => this.drain(engineId, id), 0).unref?.();
       if (fallbackOf(err) === 'queue') throw failure(`${messageOf(err).replace(/，?消息已排队$/, '')}，消息还在队列里`, 409);
@@ -169,7 +171,8 @@ class RunService {
     const key = this.hub.key(engineId, id), list = this.queues.get(key) || [];
     const index = list.findIndex(item => item.id === itemId);
     if (index < 0) throw failure('这条排队消息已经发出或不存在', 409);
-    const [item] = list.splice(index, 1); if (!list.length) this.queues.delete(key);
+    const [item] = list.splice(index, 1);
+    if (!list.length) { this.queues.delete(key); this.paused.delete(key); }
     if (!item) throw failure('这条排队消息已经发出或不存在', 409);
     this.publishQueue(engineId, id);
     // The removed message comes back so the page can put it into the composer for editing.
@@ -219,10 +222,17 @@ class RunService {
         latest?.id !== expected || (latest.status !== 'running' && !(latest.status === 'unknown' && history.session.status === 'busy'))) throw changed();
     }
     // Stopping one turn must not immediately start the next message from the workbench queue.
-    if (this.queues.has(this.hub.key(engineId,id))) this.pauseQueue(engineId,id,true);
+    const key = this.hub.key(engineId, id);
+    const didPause = this.queues.has(key) && !this.paused.has(key);
+    if (didPause) this.pauseQueue(engineId, id, true);
     // An engine that confirms the stop from its own records (the turn may have ended on its
     // own at that moment) returns { pending: true } and reports the final status itself.
-    const result = await engine.interrupt(id, record?.emitter, record ? undefined : expected);
+    let result: unknown;
+    try { result = await engine.interrupt(id, record?.emitter, record ? undefined : expected); }
+    catch (err) {
+      if (didPause && this.queues.has(key)) this.pauseQueue(engineId, id, false);
+      throw err;
+    }
     if (!get(result, 'pending')) record?.emit('run.interrupted', {});
     return result;
   }

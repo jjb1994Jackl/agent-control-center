@@ -8,8 +8,11 @@ import { get, parseJson } from '../shared/guards.js';
 
 function findRoot(start: string): string {
   for (let dir = start; ; dir = path.dirname(dir)) {
-    try { if (get(parseJson(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')), 'name') === 'agent-frontdesk') return dir; } catch {}
-    if (path.dirname(dir) === dir) throw new Error('Agent Frontdesk: project root not found');
+    try {
+      const name = get(parseJson(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')), 'name');
+      if (name === 'agent-control-center' || name === 'agent-frontdesk') return dir;
+    } catch {}
+    if (path.dirname(dir) === dir) throw new Error('Agent Control Center: project root not found');
   }
 }
 const HERE = path.dirname(fileURLToPath(import.meta.url));

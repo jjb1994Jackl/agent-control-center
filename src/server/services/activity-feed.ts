@@ -50,6 +50,17 @@ class ActivityFeed {
       if (this.notice(event.engine, event.sessionId, said)) this.changed();
       return;
     }
+    if (event.type === 'approval.requested' || event.type === 'approval.resolved' || event.type === 'queue.updated') {
+      const key = this.hub.key(event.engine, event.sessionId), previous: Partial<ActivityEntry> = this.entries.get(key) || {};
+      const activeRun = this.runs.get(event.engine, event.sessionId);
+      const waiting = event.type === 'approval.requested' ? true
+        : event.type === 'approval.resolved' ? !!activeRun?.run.approvals?.length
+        : !!previous.waiting;
+      const queuePaused = event.type === 'queue.updated' ? !!get(event.data, 'paused') : (this.runs.queuePaused?.(event.engine, event.sessionId) ?? false);
+      const next: ActivityEntry = { ...previous, engine: event.engine, sessionId: event.sessionId, running: previous.running ?? !!activeRun, waiting, queuePaused };
+      if (JSON.stringify(next) !== JSON.stringify(previous)) { this.entries.set(key, next); this.changed(); }
+      return;
+    }
     const ended = ['run.completed', 'run.failed', 'run.interrupted'].includes(event.type);
     if (event.type !== 'run.started' && !ended && event.type !== 'run.connection_lost') return;
     const key = this.hub.key(event.engine, event.sessionId), previous: Partial<ActivityEntry> = this.entries.get(key) || {};
@@ -58,7 +69,10 @@ class ActivityFeed {
     // A console run that lost track of its turn is not shown as working on its word alone:
     // from then on the desktop's own record says whether the chat runs (poll).
     this.entries.set(key, { ...previous, engine: event.engine, sessionId: event.sessionId, turnId: event.turnId,
-      running: event.type === 'run.started' || (event.type === 'run.connection_lost' && this.nativeRunning.has(key)), outcome: ended ? event.type.slice(4) : null,
+      running: event.type === 'run.started' || (event.type === 'run.connection_lost' && this.nativeRunning.has(key)),
+      waiting: ended ? false : !!this.runs.get(event.engine, event.sessionId)?.run.approvals?.length,
+      queuePaused: this.runs.queuePaused?.(event.engine, event.sessionId) ?? false,
+      outcome: ended ? event.type.slice(4) : null,
       startedAt: event.type === 'run.started' ? Date.parse(event.timestamp) || Date.now() : previous.startedAt || 0,
       confirmedTerminal: ended, completedAt: ended ? Date.parse(event.timestamp) : previous.completedAt || 0,
     });
@@ -111,6 +125,7 @@ class ActivityFeed {
           // A run seen here first starts when its turn did, so older speech is not shown as its.
           const startedAt = !running ? previous?.startedAt || 0 : (previous?.running && previous.startedAt) || stamp(session.metadata?.turnStartedAt || 0) || Date.now();
           const next: ActivityEntry = { ...previous, engine: engine.id, sessionId: session.id, title: session.title, running, startedAt,
+            waiting: !!activeRun?.run.approvals?.length, queuePaused: this.runs.queuePaused?.(engine.id, session.id) ?? false,
             nativeRevision: revision, nativeTerminalToken: token || previous?.nativeTerminalToken || null,
             outcome, confirmedTerminal: finished || previous?.confirmedTerminal || false,
             completedAt: finished ? stamp(latest?.completedAt) : previous?.completedAt || 0 };

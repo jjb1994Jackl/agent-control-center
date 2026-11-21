@@ -68,7 +68,7 @@ export class TaskBook {
   }
   list() {
     return this.db.prepare(`SELECT id,engine,session,project,title,state,turn,preview,created,updated,source,session_name
-      FROM tasks WHERE state != 'merged' ORDER BY updated DESC`).all() as Task[];
+      FROM tasks WHERE state != 'merged' ORDER BY updated DESC LIMIT 500`).all() as Task[];
   }
   reserve(id: string, engine: string, session: string, project: string, title: string) {
     const at = new Date().toISOString();

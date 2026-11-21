@@ -2,8 +2,10 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="referrer" content="no-referrer" />
+    <script>try { const lang = localStorage.getItem('desktop-bridge:lang'); if (lang === 'en' || (lang !== 'zh' && !/^zh\b/i.test(navigator.language || 'zh'))) document.documentElement.lang = 'en'; const theme = localStorage.getItem('desktop-bridge:theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; } catch {}</script>
     <title>总览 · Agent Control Center</title>
     <link rel="icon" href="/assets/logo/favicon.svg" />
     <script type="module" src="/tasks.ts"></script>
@@ -14,34 +16,35 @@
         <div class="brand">
           <img src="/assets/logo/logo-64.png" width="32" height="32" alt="" />Agent Control Center
         </div>
-        <nav aria-label="主要导航">
-          <a href="/tasks.html" aria-current="page">总览</a>
-          <a href="/?workbench=1">工作台</a>
+        <nav aria-label="主要导航" data-i18n-aria="nav">
+          <a href="/tasks.html" aria-current="page" data-i18n="overview">总览</a>
+          <a href="/?workbench=1" data-i18n="workbench">工作台</a>
         </nav>
       </div>
     </header>
     <main class="wrap">
       <div class="heading">
-        <h1>任务总览</h1>
+        <h1 data-i18n="heading">任务总览</h1>
       </div>
-      <div class="counts" role="group" aria-label="按状态筛选">
-        <button type="button" aria-pressed="false" data-filter="attention">待处理<strong id="attention">0</strong></button>
-        <button type="button" aria-pressed="false" data-filter="busy">进行中<strong id="busy">0</strong></button>
-        <button type="button" aria-pressed="false" data-filter="completed">已完成<strong id="done">0</strong></button>
+      <div class="counts" role="group" aria-label="按状态筛选" data-i18n-aria="filterGroup">
+        <button type="button" aria-pressed="false" data-filter="attention"><span data-i18n="attention">待处理</span><strong id="attention">0</strong></button>
+        <button type="button" aria-pressed="false" data-filter="busy"><span data-i18n="busy">进行中</span><strong id="busy">0</strong></button>
+        <button type="button" aria-pressed="false" data-filter="replied"><span data-i18n="replied">已回复</span><strong id="replied">0</strong></button>
+        <button type="button" aria-pressed="false" data-filter="done"><span data-i18n="done">已结束</span><strong id="done">0</strong></button>
       </div>
       <section class="usage" aria-labelledby="usage-heading">
         <div class="toolbar">
-          <h2 id="usage-heading">Agent 额度</h2>
-          <button id="usage-refresh" class="icon" title="刷新额度" aria-label="刷新额度">
+          <h2 id="usage-heading" data-i18n="usageHeading">Agent 额度</h2>
+          <button id="usage-refresh" class="icon" title="刷新额度" aria-label="刷新额度" data-i18n-title="refreshUsage">
             <i data-lucide="refresh-cw"></i>
           </button>
         </div>
-        <div id="usage-grid" class="usage-grid" aria-live="polite">正在读取额度…</div>
+        <div id="usage-grid" class="usage-grid" aria-live="polite" data-i18n="loadingUsage">正在读取额度…</div>
         <p id="usage-error" class="muted" role="status" hidden></p>
       </section>
       <div class="toolbar">
-        <h2>派单记录</h2>
-        <button id="refresh" class="icon" aria-label="刷新任务" title="刷新任务">
+        <h2 data-i18n="recordsHeading">派单记录</h2>
+        <button id="refresh" class="icon" aria-label="刷新任务" title="刷新任务" data-i18n-title="refreshTasks">
           <i data-lucide="refresh-cw"></i>
         </button>
       </div>
@@ -49,15 +52,15 @@
       <p id="grok-sync" class="muted sync-note" role="status" hidden></p>
       <div class="table">
         <div class="row labels">
-          <span>任务 / 最新回复</span><span>Agent / 会话</span><span>状态</span><span>最近更新</span>
+          <span data-i18n="colTask">任务 / 最新回复</span><span data-i18n="colAgent">Agent / 会话</span><span data-i18n="colState">状态</span><span data-i18n="colUpdated">最近更新</span>
         </div>
         <div id="rows"></div>
       </div>
     </main>
     <dialog id="quota-dialog">
       <div class="dialog-head">
-        <h2 id="quota-title">额度详情</h2>
-        <button class="icon" id="quota-close" title="关闭" aria-label="关闭">
+        <h2 id="quota-title" data-i18n="quotaTitle">额度详情</h2>
+        <button class="icon" id="quota-close" title="关闭" aria-label="关闭" data-i18n-title="close">
           <i data-lucide="x"></i>
         </button>
       </div>
@@ -66,8 +69,8 @@
     </dialog>
     <dialog id="detail">
       <div class="dialog-head">
-        <h2>任务详情</h2>
-        <button class="icon" id="detail-close" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+        <h2 data-i18n="detailTitle">任务详情</h2>
+        <button class="icon" id="detail-close" title="关闭" aria-label="关闭" data-i18n-title="close"><i data-lucide="x"></i></button>
       </div>
       <dl id="detail-fields"></dl>
     </dialog>

@@ -56,7 +56,8 @@ const EN: Record<string, string> = {
   '拖动调整顺序': 'Drag to reorder', '编辑 {name} 的名称和头像': 'Edit the name and avatar of {name}', '编辑名称、头像和顺序': 'Edit name, avatar and order',
   '这张图片读不出来': "This picture can't be read", '只支持 PNG、JPEG、GIF、WebP 图片': 'Only PNG, JPEG, GIF and WebP pictures are supported', '图片不能超过 2 MB': 'Pictures can be up to 2 MB',
   '先接上一个 Agent': 'Connect your first agent',
-  'Agent Frontdesk 是桌面版 AI 的远程窗口。打开一个 Agent 的开关，就能在这里看它的聊天、给它发消息，任务仍由它的桌面版执行。': 'Agent Frontdesk is a remote window onto your desktop AI apps. Turn an agent on to read its chats and message it from here. The work still runs in its desktop app.',
+  'Agent Control Center 是桌面版 AI 的统一工作台。打开一个 Agent 的开关，就能在这里看它的聊天、给它发消息，任务仍由它的桌面版执行。': 'Agent Control Center is a local workbench for your desktop AI apps. Turn an agent on to read its chats and message it from here. The work still runs in its desktop app.',
+  'Agent Frontdesk 是桌面版 AI 的远程窗口。打开一个 Agent 的开关，就能在这里看它的聊天、给它发消息，任务仍由它的桌面版执行。': 'Agent Control Center is a local workbench for your desktop AI apps. Turn an agent on to read its chats and message it from here. The work still runs in its desktop app.',
   '接入其他桌面 AI': 'Connect another desktop AI', '接入其他桌面 AI…': 'Connect another desktop AI…', '列表里没有的，把一段提示词发给它，它会照着手册自己接进来': "Not listed? Send it a prompt and it connects itself, following the guide",
   // sidebar
   // new chat cards (what the desktop's New session page asks for)
@@ -224,7 +225,7 @@ const REPORTS: Record<string, string> = {
   'Claude 桌面版有同名会话，这个会话又没有本地 id，分不清是哪一个，所以没有动手': "More than one chat has this title in Claude, and this one has no local ID to tell them apart, so nothing was done. Do it in Claude itself.",
   '缺少有效的会话 ID': 'Missing a valid chat ID', '缺少有效的会话 ID 或标题': 'Missing a valid chat ID or title',
   '没能按下 Claude 桌面版的停止按钮': "Couldn't press Stop in Claude's desktop app",
-  '桌面代发需要辅助功能权限：在「系统设置 → 隐私与安全性 → 辅助功能」里允许运行工作台服务的程序（例如终端），然后重启工作台': "Sending through the desktop app needs Accessibility access. In System Settings → Privacy & Security → Accessibility, allow the app that runs Frontdesk (for example Terminal), then restart Frontdesk.",
+  '桌面代发需要辅助功能权限：在「系统设置 → 隐私与安全性 → 辅助功能」里允许运行工作台服务的程序（例如终端），然后重启工作台': "Sending through the desktop app needs Accessibility access. In System Settings → Privacy & Security → Accessibility, allow Agent Control Center (or the app running the workbench), then restart it.",
   'Claude 桌面版没有及时响应': "Claude's desktop app didn't respond in time", '桌面代发程序没有正常返回': 'The desktop helper stopped unexpectedly', '桌面代发只支持 macOS': 'Sending through the desktop app only works on macOS', '桌面代发只支持 macOS 和 Windows': 'Sending through the desktop app works on macOS and Windows', '桌面版以更高的权限运行（例如以管理员身份），工作台能读到它的界面但不能操作：请用相同的权限运行两者': 'The desktop app runs with higher rights (as administrator, say): the console can read its window but not act on it. Run both with the same rights.', '桌面代发程序编译失败（需要 Windows 自带的 .NET Framework 4 的 csc.exe）': "The desktop helper didn't compile (it needs the csc.exe of .NET Framework 4, which comes with Windows)", 'Windows 上的桌面代发还在移植中，暂时不能通过窗口操作发送': "Sending through the desktop app's window isn't available on Windows yet: it is still being ported",
   '缺少桌面版在 Windows 上的配置（AX_PROFILE 的 windows.exe）': "The desktop app's Windows settings are missing (windows.exe in AX_PROFILE)",
   '另一个桌面版正在后台操作，稍后再试': 'Another desktop app is being worked from behind right now. Try again in a moment.',
@@ -234,7 +235,7 @@ const REPORTS: Record<string, string> = {
   'Codex 桌面版的项目菜单没有关上，没有发送：请到桌面版里关掉它': "Codex's project menu didn't close, so nothing was sent. Close it in the desktop app.", 'Codex 桌面版的模型菜单没有关上，没有发送：请到桌面版里关掉它': "Codex's model menu didn't close, so nothing was sent. Close it in the desktop app.",
   'Codex 桌面版里这个会话的模型或推理强度刚刚变了，没有发送：请刷新后重新选择': "This chat's model or effort just changed in Codex's desktop app, so nothing was sent. Refresh and pick again.", 'Codex 桌面版现在没有打开这个会话，没法给它换模型或推理强度，没有发送：请先在桌面版里打开这个会话': "Codex's desktop app doesn't have this chat open, so its model or effort can't be changed and nothing was sent. Open the chat in the desktop app first.",
   '桌面代发程序编译失败（需要 Xcode 命令行工具：xcode-select --install）': "Couldn't build the desktop helper. Install the Xcode command line tools: xcode-select --install", 'Claude 桌面版没有在运行': "Claude's desktop app isn't running",
-  '桌面代发程序不可用': 'The desktop helper is unavailable', '工作台没有辅助功能权限': "Frontdesk doesn't have Accessibility access", '缺少会话标题': 'Missing chat title', '消息是空的': 'The message is empty',
+  '桌面代发程序不可用': 'The desktop helper is unavailable', '工作台没有辅助功能权限': "Agent Control Center doesn't have Accessibility access", '缺少会话标题': 'Missing chat title', '消息是空的': 'The message is empty',
   '请保持 Grok Bot 的主对话打开以同步回传': 'Keep the primary Grok Bot chat open to sync receipts',
   'Grok 有多个同名会话，在原应用改名后再试': 'More than one Grok chat has this name. Rename it in the desktop app and try again.',
   'Grok 当前离线，显示最近读取的消息': 'Grok is offline. Showing the last messages read.',

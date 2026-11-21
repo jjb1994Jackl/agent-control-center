@@ -1848,7 +1848,8 @@ body { flex-direction: row; background: var(--desk); }
 .chat-header .icon-button { width: 32px; height: 32px; }
 .chat-header .lucide { width: 17px; height: 17px; }
 .chat-header #stop:not([hidden]) { color: var(--negative); border: 1px solid currentColor; }
-.chat-header #pause-queue[aria-pressed='true'], .chat-header #pin-chat[aria-pressed='true'] { background: var(--surface); color: var(--text); }
+.chat-header #pause-queue[aria-pressed='true'], .chat-header #pin-chat[aria-pressed='true']:not(:disabled) { background: var(--surface); color: var(--text); }
+.chat-header #pin-chat:disabled { background: transparent; color: var(--muted); opacity: .72; cursor: default; }
 .chat-header #toggle-panel[aria-expanded="true"] { background: var(--surface); color: var(--text); }
 .header-tools { flex: none; display: flex; gap: 2px; margin-left: 4px; padding-left: 8px; border-left: 1px solid var(--rule); }
 /* "Open in <app>": takes the person to this chat in the agent's desktop app. */
@@ -1891,9 +1892,9 @@ dialog::backdrop { background: rgb(0 0 0 / .42); }
   .control-bar { width: auto; height: 60px; flex-direction: row; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--desk-line); }
   .control-brand, .engine-dock::before, .quota-meter, .quota-card, .engine-name { display: none; }
   [data-rail] .speech-bubble { display: none !important; }
-  .engine-dock { width: auto; flex: 1; flex-direction: row; align-items: center; gap: 2px; padding: 6px 0; overflow-x: auto; scrollbar-width: none; }
-  .engine-switch { width: auto; flex: none; padding: 4px 8px; }
-  .engine-switch::before { left: 50%; top: auto; bottom: -3px; width: 0; height: 3px; border-radius: 3px 3px 0 0; transform: translateX(-50%); transition: width 200ms var(--ease); }
+  .engine-dock { width: auto; flex: 1; flex-direction: row; align-items: center; gap: 2px; padding: 4px 0; overflow-x: auto; scrollbar-width: none; }
+  .engine-switch { width: auto; flex: none; padding: 4px 8px 6px; }
+  .engine-switch::before { left: 50%; top: auto; bottom: 0; width: 0; height: 3px; border-radius: 3px 3px 0 0; transform: translateX(-50%); transition: width 200ms var(--ease); }
   .engine-switch.is-unread::before { width: 6px; height: 3px; }
   .engine-switch:hover::before, .engine-switch:focus-visible::before { width: 14px; height: 3px; }
   .engine-switch[aria-pressed="true"]::before { width: 24px; height: 3px; }
