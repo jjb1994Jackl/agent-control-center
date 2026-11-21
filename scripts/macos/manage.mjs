@@ -186,8 +186,9 @@ async function install(args) {
       throw error;
     }
   } finally { fs.rmSync(stage, { recursive: true, force: true }); }
-  console.log(`Workbench: ${url(port, '?setup=1')}\nDiagnostics: "${control}" doctor`);
-  if (!args.includes('--no-open')) run('/usr/bin/open', [url(port, '?setup=1')]);
+  const startPage = url(port, previous ? '' : '?setup=1');
+  console.log(`Workbench: ${startPage}\nDiagnostics: "${control}" doctor`);
+  if (!args.includes('--no-open')) run('/usr/bin/open', [startPage]);
 }
 
 async function main([action = 'launch', ...args]) {
@@ -199,7 +200,7 @@ async function main([action = 'launch', ...args]) {
       if (loaded()) run(launch, ['kickstart', job]); else load(login);
       await wait(port);
     }
-    run('/usr/bin/open', [url(port, '?setup=1')]);
+    run('/usr/bin/open', [url(port)]);
   } else if (action === 'doctor') {
     const online = await alive(port);
     console.log(`Workbench: ${online ? url(port) : await portFree(port) ? 'not running' : 'port in use or still starting'}\nLogin startup: ${login ? 'on' : 'off'}\nLogs: ${logs}`);

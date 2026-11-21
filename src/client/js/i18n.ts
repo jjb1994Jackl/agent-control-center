@@ -22,6 +22,8 @@ export const locale = language === 'en' ? 'en-US' : 'zh-CN';
 // not word for word from the Chinese.
 const EN: Record<string, string> = {
   '全部任务': 'All tasks',
+  '总览': 'Overview',
+  '上次送达尚未确认，请核对总览或原会话，不要重复发送': 'Delivery is unconfirmed. Check the overview or original chat before sending again.',
   '请先选择一个已有聊天': 'Choose an existing chat',
   '正在从桌面版读这张卡片的按钮…': "Reading this card's buttons from the desktop app…",
   // time and usage
@@ -151,6 +153,10 @@ const REPORTS: Record<string, string> = {
   '未取得可确认的回执，请核对 Grok Bot；未自动重发':'No confirmed receipt. Check Grok Bot; the task was not resent.',
   '任务参数无效':'Invalid task parameters', '该 Agent 未启用':'This agent is disabled', 'Grok 不接受项目或会话参数':'Grok does not accept a project or session.',
   '此 Agent 不支持该派单方式':'This agent does not support this dispatch method.',
+  '此任务编号已存在':'This request ID is already in use.',
+  '工作台任务':'Workbench task',
+  '已从队列移除，未下发':'Removed from queue without sending.',
+  '任务未发送':'The task was not sent.',
   '未找到此会话':'Session not found', '已发送，无法跟踪原生会话':'Sent; native session tracking unavailable.', '无法确认发送结果':'Delivery could not be confirmed.',
   // a chat written out for another agent to read (POST …/transcript)
   '没有找到这个聊天': "Couldn't find this chat", '这个聊天还没有内容可以引用': "There's nothing in this chat to refer to yet",

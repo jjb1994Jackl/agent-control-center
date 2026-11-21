@@ -18,7 +18,7 @@ export interface RunRecord {
   reconciling: boolean;
   emit: Emit;
 }
-interface QueueItem { id: string; input: SendInput; at: string }
+interface QueueItem { id: string; input: SendInput; at: string; dispatchId?: string }
 // What an engine threw on purpose: `fallback: 'queue'` sends a steer to the queue instead.
 const fallbackOf = (err: unknown) => get(err, 'fallback');
 const failure = (message: string, status: number) => Object.assign(new Error(message), { status });
@@ -32,7 +32,7 @@ class RunService {
     this.queues = new Map(); this.draining = new Map(); this.pollMs = 3000;
   }
   get(engine: string, id: string): RunRecord | undefined { return this.active.get(this.hub.key(engine, id)); }
-  start(engineId: string, id: string, input: SendInput | CreateInput, { observe = false, at }: { observe?: boolean; at?: string } = {}): { turnId: string; cursor: string } {
+  start(engineId: string, id: string, input: SendInput | CreateInput, { observe = false, at, dispatchId }: { observe?: boolean; at?: string; dispatchId?: string } = {}): { turnId: string; cursor: string } {
     const engine = this.host.get(engineId), key = this.hub.key(engineId, id);
     if (this.active.has(key)) throw failure('当前会话已有任务正在执行', 409);
     const run: RunTurn = { id: randomUUID(), userPrompt: input.prompt, timestamp: at || new Date().toISOString(), status: 'running', messages: [], activities: [], artifacts: [], approvals: [], timeline: [] };
@@ -67,7 +67,7 @@ class RunService {
       else this.hub.publish(engineId, id, run.id, ...event);
     };
     record.emit = emit;
-    emit('run.started', { turn: run });
+    emit('run.started', { turn: run, ...(dispatchId ? { dispatchId } : {}) });
     // Defer so listeners exist before synchronous provider errors or first events.
     queueMicrotask(() => {
       try {
@@ -110,9 +110,9 @@ class RunService {
   }
   // Steer: add a message to the turn that is running now (the engine delivers it at its next
   // step, as its desktop does when you type while it works).
-  async steer(engineId: string, id: string, input: SendInput): Promise<{ status: string; id?: string; reason?: string }> {
+  async steer(engineId: string, id: string, input: SendInput, dispatchId?: string): Promise<{ status: string; id?: string; reason?: string }> {
     try { return await this.deliver(engineId, id, input); }
-    catch (err) { if (fallbackOf(err) === 'queue') return { ...this.enqueue(engineId, id, input), reason: messageOf(err) }; throw err; }
+    catch (err) { if (fallbackOf(err) === 'queue') return { ...this.enqueue(engineId, id, input, dispatchId), reason: messageOf(err) }; throw err; }
   }
   async deliver(engineId: string, id: string, input: SendInput): Promise<{ status: string }> {
     const engine = this.host.get(engineId), record = this.get(engineId, id);
@@ -146,10 +146,10 @@ class RunService {
     return (this.queues.get(this.hub.key(engineId, id)) || []).map(item => ({ id: item.id, prompt: item.input.prompt, attachments: item.input.attachments?.length || 0, at: item.at }));
   }
   publishQueue(engineId: string, id: string): void { this.hub.publish(engineId, id, null, 'queue.updated', { items: this.queued(engineId, id) }); }
-  enqueue(engineId: string, id: string, input: SendInput): { status: string; id: string } {
+  enqueue(engineId: string, id: string, input: SendInput, dispatchId?: string): { status: string; id: string } {
     const key = this.hub.key(engineId, id), list = this.queues.get(key) || [];
     if (list.length >= 20) throw failure('排队的消息太多了', 429);
-    const item = { id: randomUUID(), input, at: new Date().toISOString() };
+    const item = { id: randomUUID(), input, at: new Date().toISOString(), ...(dispatchId ? { dispatchId } : {}) };
     list.push(item); this.queues.set(key, list); this.hub.pinned.add(key);
     this.publishQueue(engineId, id);
     if (!this.active.has(key)) setTimeout(() => this.drain(engineId, id), 0).unref?.();
@@ -187,7 +187,7 @@ class RunService {
         if (!item) break;
         if (!this.queues.get(key)?.length) this.queues.delete(key);
         this.publishQueue(engineId, id);
-        this.start(engineId, id, item.input);
+        this.start(engineId, id, item.input, { dispatchId: item.dispatchId });
         break;
       }
     } finally {

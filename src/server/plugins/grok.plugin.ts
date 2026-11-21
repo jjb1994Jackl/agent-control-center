@@ -5,6 +5,7 @@ import { grokDesktop } from '../services/grok-desktop.js';
 import { EngineEvents, UnifiedSession, UnifiedTurn } from '../types.js';
 import type { History, UnifiedMessage, PluginAbout, PluginSetup } from '../../shared/contract.js';
 import { get, list } from '../../shared/guards.js';
+import { promptKey } from '../../shared/turn-match.js';
 
 const bundle = '/Applications/Grok Bot.app';
 const identity = { id: 'grok', label: 'Grok Bot', description: 'Grok Bot desktop', priority: 40, accent: '#777F8C' } as const;
@@ -24,6 +25,7 @@ export const about: PluginAbout = {
 export function grokTurns(raw: unknown): UnifiedTurn[] {
   const turns: UnifiedTurn[] = [];
   const occurrence = new Map<string, number>();
+  let userAnchor = '';
   const keyOf = (author: string, text: string) => {
     const base = hash(author + '\0' + text), count = (occurrence.get(base) ?? 0) + 1;
     occurrence.set(base, count);
@@ -34,7 +36,11 @@ export function grokTurns(raw: unknown): UnifiedTurn[] {
     if (typeof author !== 'string' || typeof body !== 'string' || !body.trim()) continue;
     const key = keyOf(author, body);
     if (get(row, 'user') === true) {
-      turns.push(new UnifiedTurn({ id: key, userPrompt: body, status: 'unknown', timestamp: '' }));
+      const stamp = get(row, 'stamp');
+      // If the native viewport drops an earlier prompt, this anchor no longer matches. Do not
+      // attach a later identical prompt to an older task using a recycled occurrence number.
+      userAnchor = hash(userAnchor + '\0' + String(stamp ?? '') + '\0' + promptKey(body));
+      turns.push(new UnifiedTurn({ id: typeof stamp === 'string' && stamp ? 'grok-' + userAnchor : key, userPrompt: body, status: 'unknown', timestamp: '' }));
     } else {
       let last = turns.at(-1);
       if (!last) { last = new UnifiedTurn({ id: 'before-' + key, status: 'unknown', timestamp: '' }); turns.push(last); }
@@ -107,7 +113,9 @@ export const setup: PluginSetup = ({ registerEngine }) => {
       if (!result.ok && result.code !== 'crashed') throw fail(result.error || 'Grok 消息未发出');
       if (result['delivery'] !== 'sent')
         return { status: 'uncertain', reason: '无法确认 Grok 是否收到消息，请核对会话，不要重复发送' };
-      return { status: 'sent' };
+      const seen = grokTurns(result['observed']).at(-1);
+      const observedTurnId = seen?.id.startsWith('grok-') && promptKey(seen.userPrompt) === promptKey(input.prompt) ? seen.id : undefined;
+      return { status: 'sent', observedTurnId, sessionTitle: title };
     },
     send: () => {
       const emitter = new EngineEvents();

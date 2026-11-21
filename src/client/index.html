@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="light dark">
   <script>try { const lang = localStorage.getItem('desktop-bridge:lang'); if (lang === 'en' || (lang !== 'zh' && !/^zh\b/i.test(navigator.language || 'zh'))) document.documentElement.lang = 'en'; const theme = localStorage.getItem('desktop-bridge:theme'); if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme; document.documentElement.dataset.bubble = localStorage.getItem('desktop-bridge:bubble') === 'side' ? 'side' : 'below'; document.documentElement.dataset.avatars = localStorage.getItem('desktop-bridge:avatars') === 'off' ? 'off' : 'on'; } catch { document.documentElement.dataset.bubble = 'below'; document.documentElement.dataset.avatars = 'on'; } document.documentElement.dataset.rail = document.documentElement.dataset.bubble === 'side' && innerWidth > 1100 ? 'wide' : 'compact';</script>
   <title>Agent Control Center</title>
+  <script>if (!location.hash && !['setup','workbench'].some(key => new URLSearchParams(location.search).has(key))) location.replace('/tasks.html');</script>
   <link rel="icon" type="image/svg+xml" href="/assets/logo/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo/logo-32.png">
   <link rel="icon" type="image/png" sizes="64x64" href="/assets/logo/logo-64.png">
@@ -19,7 +20,7 @@
     <nav id="engine-dock" class="engine-dock" aria-label="快速切换引擎"><span class="quiet-state">正在连接引擎…</span></nav>
     <button class="dock-add" id="add-engine" aria-label="添加 Agent" title="添加 Agent" aria-haspopup="dialog"><i data-lucide="plus"></i><span>添加 Agent</span></button>
     <div class="rail-foot">
-      <a class="icon-button" href="/tasks.html" title="全部任务" aria-label="全部任务"><i data-lucide="list-checks"></i></a>
+      <a class="icon-button" href="/tasks.html" title="总览" aria-label="总览"><i data-lucide="list-checks"></i></a>
       <button type="button" class="icon-button rail-toggle" id="toggle-rail" aria-label="展开 Agent 栏" title="展开 Agent 栏" aria-pressed="false"><i data-lucide="chevrons-right"></i></button>
       <button type="button" class="icon-button" id="open-settings" aria-label="设置" title="设置" aria-haspopup="dialog"><i data-lucide="settings"></i></button>
       <button type="button" class="user-chip" id="open-profile" aria-label="我的" title="我的" aria-haspopup="listbox" aria-expanded="false"><span class="user-avatar" id="user-avatar"></span></button>

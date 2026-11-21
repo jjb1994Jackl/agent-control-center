@@ -833,6 +833,20 @@ function switchEngine(id: string, { restore = true, route = true } = {}): Promis
   restoreDraft(); renderHeader(); renderDock(); renderSessionList(); renderConversation(); animateView();
   if (route) historyPush(`#${encodeURIComponent(id)}`);
 }
+async function dispatchMessage<T>(url: string, data: { prompt: string; attachments: unknown[]; cwd?: string; space?: string; projectId?: string; [key: string]: unknown }): Promise<T> {
+  const payload = JSON.stringify([url, data.prompt, data.attachments, url.endsWith('/messages') ? null : [data.cwd, data.space, data.projectId]]);
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+  const key = 'acc-dispatch-' + Array.from(new Uint8Array(hash), n => n.toString(16).padStart(2,'0')).join('');
+  const dispatchId = localStorage.getItem(key) || crypto.randomUUID();
+  localStorage.setItem(key, dispatchId);
+  const result = await answer<T>(url, { method: 'POST', body: JSON.stringify({ ...data, dispatchId }) });
+  if (!result.ok) {
+    if (result.status < 500 && result.status !== 425) localStorage.removeItem(key);
+    throw new Error(say(str(get(result.data, 'error')) || '') || `Request failed (${result.status})`);
+  }
+  if (get(result.data, 'status') !== 'uncertain' && get(result.data, 'dispatchUncertain') !== true) localStorage.removeItem(key);
+  return result.data;
+}
 async function sendMessage(event?: Event | null, queue = false): Promise<void> {
   event?.preventDefault();
   if ($('send').disabled || state.submitting) return;
@@ -846,7 +860,7 @@ async function sendMessage(event?: Event | null, queue = false): Promise<void> {
   const prompt = originalInput.trim(), attachments = [...state.attachments];
   sending.add(owner); renderControls(); notify('');
   try {
-    const result = await request<{ status?: string; reason?: string } | null>(`${url}/messages`, { method: 'POST', body: JSON.stringify({ prompt, attachments, cwd: state.session.cwd || undefined, mode, ...options() }) });
+    const result = await dispatchMessage<{ status?: string; reason?: string } | null>(`${url}/messages`, { prompt, attachments, cwd: state.session.cwd || undefined, sessionTitle: state.session.title, mode, ...options() });
     if (mode === 'steer' && result?.status === 'queued' && view === state.view) notify(`${say(result.reason) || t('这一轮没法插进去，消息已排队')}${t('，可以在队列里再点“插入”')}`);
     drafts.clearSent(owner, originalInput, attachments);
     noteFocusOnce('send');
@@ -892,7 +906,7 @@ async function sendFirst() {
     const where = mode ? { space: mode, ...(inProject ? { projectId: inProject.id } : {}) } : {};
     // What the cards show as chosen goes with the message: the desktop checks its page against it.
     const expect = !mode && capsOf().newOptions && newOptions.engine === provider.id ? newOptions.expect() : [];
-    session = await request<CreateResult & { title?: string; metadata?: SessionMetadata }>(`/api/sessions/${encodeURIComponent(provider.id)}`, { method: 'POST', body: JSON.stringify({ cwd, ...chosen, ...where, ...(expect.length ? { expect } : {}), ...(direct ? { prompt, attachments } : { title: title || undefined }) }) });
+    session = await dispatchMessage<CreateResult & { title?: string; metadata?: SessionMetadata }>(`/api/sessions/${encodeURIComponent(provider.id)}`, { cwd, ...chosen, ...where, ...(expect.length ? { expect } : {}), prompt, attachments, ...(direct ? {} : { title: title || undefined }) });
     const group = mode ? (inProject ? { id: inProject.id, name: inProject.name, cwd: '' } : null) : target?.project ? { id: target.project.id, name: target.project.name, cwd: target.project.cwd } : aimed?.id ? { id: aimed.id, name: aimed.name ?? '', cwd: aimed.cwd } : capsOf().cwd && !capsOf().newOptions ? null : undefined;
     newProject = null;
     newOptions.sent();
@@ -905,7 +919,7 @@ async function sendFirst() {
       // What was picked for the first message stays picked in the new chat.
       for (const [id, value] of [['model', chosen.model], ['effort', chosen.reasoningEffort], ['permission', chosen.permissionMode]] satisfies Array<[Menu, string | undefined]>) if (value && [...$(id).options].some(option => option.value === value)) { $(id).value = value; $(id).dispatchEvent(new Event('change', { bubbles: true })); }
     } else renderSessionList();
-    if (!direct) await request(`${sessionUrl(provider.id, session.id)}/messages`, { method: 'POST', body: JSON.stringify({ prompt, attachments, cwd: session.cwd || cwd, ...chosen }) });
+    if (session.dispatchUncertain && view === state.view) notify(t('上次送达尚未确认，请核对总览或原会话，不要重复发送'));
   } catch (err) {
     notify(session ? `${t('聊天已建好，但第一条消息没发出去：')}${messageOf(err)}` : `${t('新建聊天失败：')}${messageOf(err)}`);
     // The desktop's page may not be what the cards show any more: read it again.

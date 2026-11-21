@@ -357,7 +357,7 @@ export interface EngineMethods {
   create(input: CreateInput): Awaitable<CreateResult>;
   send(id: string, input: SendInput): EngineEmitter;
   /** Posts to a native chat with its own reply lifecycle, not a console-owned run. */
-  postMessage?(id: string, input: SendInput): Awaitable<{ status: 'sent' | 'uncertain'; reason?: string }>;
+  postMessage?(id: string, input: SendInput): Awaitable<{ status: 'sent' | 'uncertain'; reason?: string; observedTurnId?: string; sessionTitle?: string }>;
 
   interrupt?(id: string, emitter?: EngineEmitter | null): Awaitable<{ pending?: boolean } | void | unknown>;
   steer?(id: string, input: SendInput, emitter?: EngineEmitter | null): Awaitable<{ shown?: boolean } | void | unknown>;
@@ -619,7 +619,7 @@ export interface SessionHistoryResponse {
 
 /** The public events of one conversation (SSE `bridge` events). */
 export interface BridgeEventMap {
-  'run.started': { turn: RunTurn };
+  'run.started': { turn: RunTurn; dispatchId?: string };
   'message.updated': PresentedMessage;
   'activity.upsert': Activity;
   'artifact.upsert': PresentedArtifact;

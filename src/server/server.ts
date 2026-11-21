@@ -21,7 +21,7 @@ import { previewFile, resolveFile } from './services/file-preview.js';
 import { TranscriptStore } from './services/transcript-export.js';
 import { revealFile, fileManager } from './services/reveal.js';
 import { markTyping } from './core/desktop-automation.js';
-import { mountTasks } from './services/task-board.js';
+import { mountTasks, workbenchId } from './services/task-board.js';
 import { grokDesktop, type GrokReader } from './services/grok-desktop.js';
 import os from 'node:os';
 import { arr, errorField, get, list, messageOf, str } from '../shared/guards.js';
@@ -75,7 +75,7 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
   });
   // Attached files: kept, described and checked in one place (core/attachments.ts).
   app.get('/api/health', (_req, res) => res.json({ service: 'agent-control-center', instance: process.env.ACC_INSTANCE || null }));
-  const closeTasks = mountTasks(app, host, hub, runs, taskFile ?? (given ? ':memory:' : process.env.ACC_TASK_FILE || path.join(os.homedir(), 'Library/Application Support/Agent Control Center/tasks.sqlite')), grok);
+  const tasks = mountTasks(app, host, hub, runs, taskFile ?? (given ? ':memory:' : process.env.ACC_TASK_FILE || path.join(os.homedir(), 'Library/Application Support/Agent Control Center/tasks.sqlite')), grok);
   const attachments = new AttachmentStore(config.uploadsDir);
   const transcripts = new TranscriptStore(config.exportsDir);
   app.post('/api/upload', attachments.receive, (req, res) => {
@@ -112,14 +112,16 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
   ));
   app.get('/api/usage', async (req, res) => res.json(await usage.all()));
   app.get('/api/tasks/usage/all', async (_req, res) => {
-    const [engines, grokUsage, catalog] = await Promise.all([usage.all(), grok?.usage(), host.catalog()]);
+    const [engines, catalog] = await Promise.all([usage.all(), host.catalog()]);
     return res.set('Cache-Control', 'no-store').json({
       engines: catalog.filter(engine => engine.id !== 'grok').map(engine => ({ id: engine.id, label: engine.label, enabled: engine.enabled,
         usage: engines[engine.id] })),
-      grok: grokUsage,
+      grok: engines.grok,
+      grokEnabled: host.engines.has('grok'),
     });
   });
   app.post('/api/grok/usage', async (_req, res) => {
+    if (!host.engines.has('grok')) return res.set('Cache-Control', 'no-store').json({ available: false, checkedAt: 0 });
     return res.set('Cache-Control', 'no-store').json(await grok?.usage(true) ?? { available: false, checkedAt: 0 });
   });
   app.get('/api/activity', (req, res) => res.json(activity.snapshot()));
@@ -325,33 +327,73 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
     // Files with nothing typed still make a message (a new chat's first one too).
     return { ...input, ...(expect.length ? { expect } : {}), prompt: input.prompt || (files.length ? ATTACHMENTS_ONLY_PROMPT : ''), attachments: files };
   };
+  const refusal = (message: string) => Object.assign(new Error(message), { status: 409 });
+  async function nativeMessage(engine: Engine, session: string, input: SendInput, id?: string) {
+    const { observedTurnId, sessionTitle, ...sent } = await engine.postMessage!(session, input);
+    if (id) {
+      tasks.book.link(id, { nativeTurn: observedTurnId, sessionTitle });
+      tasks.book.set(id, sent.status === 'sent' ? 'delivered' : 'uncertain', sent.reason);
+    }
+    return sent;
+  }
+  const dispatchContent = (input: CreateInput | SendInput) => [input.prompt, input.attachments?.map(file => file.filename)];
   app.post('/api/sessions/:engine', async (req, res) => {
-    const engine = engineOf(req), input = validateInput(req.body);
-    const blocked = await sendBlocked(engine, null);
-    if (blocked) return res.status(409).json({ error: blocked });
-    if (engine.capabilities.createRequiresPrompt && !input.prompt) return res.status(400).json({ error: '请输入首条消息' });
-    // The desktop has the first message before create() answers: the turn is dated from here.
-    const asked = new Date().toISOString();
-    const session: CreateResult & { run?: unknown } = await engine.create(input);
-    if (!session?.id) throw new Error('引擎未返回会话 ID');
-    drafts.set(hub.key(req.params.engine, session.id), { ...session, engine: req.params.engine, cwd: session.cwd || input.cwd || '', title: input.title || input.prompt || '新建聊天', updatedAt: new Date().toISOString() });
-    const oldest = drafts.keys().next().value;
-    if (drafts.size > 128 && oldest !== undefined) drafts.delete(oldest);
-    if (session.started && engine.observe) session.run = runs.start(req.params.engine, session.id, input, { observe: true, at: asked });
-    res.json(session);
+    const engine = engineOf(req), input = validateInput(req.body), dispatchId = workbenchId(get(req.body, 'dispatchId'));
+    const direct = !!(engine.spaces?.find(space => space.id === input.space)?.capabilities?.createRequiresPrompt ?? engine.capabilities.createRequiresPrompt);
+    if ((direct || dispatchId) && !input.prompt) return res.status(400).json({ error: '请输入首条消息' });
+    const result = await tasks.once(dispatchId, ['create', engine.id, input.cwd, input.space, input.projectId, ...dispatchContent(input)], async () => {
+      const blocked = await sendBlocked(engine, null);
+      if (blocked) throw refusal(blocked);
+      if (dispatchId) tasks.book.reserveWorkbench({ id: dispatchId, engine: engine.id, session: '', project: input.cwd || '', prompt: input.prompt });
+      // A managed first message is one operation, even when the native engine needs create + send.
+      const asked = new Date().toISOString();
+      const session: CreateResult & { run?: unknown; dispatchUncertain?: boolean } = await engine.create(dispatchId && !direct ? { ...input, prompt: '', attachments: [] } : input);
+      if (!session?.id) throw new Error('引擎未返回会话 ID');
+      const title = str(session.title) || input.title || input.prompt.split('\n')[0]?.slice(0,96) || '新建聊天';
+      drafts.set(hub.key(engine.id, session.id), { ...session, engine: engine.id, cwd: session.cwd || input.cwd || '', title, updatedAt: new Date().toISOString() });
+      const oldest = drafts.keys().next().value;
+      if (drafts.size > 128 && oldest !== undefined) drafts.delete(oldest);
+      if (dispatchId) tasks.book.link(dispatchId, { session: session.id, sessionTitle: title });
+      if (session.started && engine.observe) session.run = runs.start(engine.id, session.id, input, { observe: true, at: asked, dispatchId });
+      else if (dispatchId && !session.started && !direct) {
+        if (engine.postMessage) session.dispatchUncertain = (await nativeMessage(engine, session.id, input, dispatchId)).status === 'uncertain';
+        else session.run = runs.start(engine.id, session.id, input, { dispatchId });
+      }
+      else if (dispatchId) {
+        if (session.started) tasks.book.link(dispatchId, { sentAt: asked });
+        tasks.book.set(dispatchId, session.started ? 'delivered' : 'uncertain');
+        session.dispatchUncertain = !session.started;
+      }
+      return session;
+    });
+    res.json(result);
   });
   app.post('/api/sessions/:engine/:id/messages', async (req, res) => {
-    const engine = engineOf(req);
-    const blocked = await sendBlocked(engine, req.params.id);
-    if (blocked) return res.status(409).json({ error: blocked });
-    const input = validateInput(req.body);
+    const engine = engineOf(req), session = req.params.id, input = validateInput(req.body);
+    const dispatchId = workbenchId(get(req.body, 'dispatchId')), mode = get(req.body, 'mode');
     if (!input.prompt) return res.status(400).json({ error: '请输入消息或添加附件' });
-    if (engine.postMessage) return res.status(202).json(await engine.postMessage(req.params.id, input));
-    // While a turn runs, a message either joins it (steer) or waits for it to end (queue).
-    const mode = get(req.body, 'mode');
-    if (mode === 'steer') return res.status(202).json(await runs.steer(req.params.engine, req.params.id, input));
-    if (mode === 'queue') return res.status(202).json(runs.enqueue(req.params.engine, req.params.id, input));
-    res.status(202).json(runs.start(req.params.engine, req.params.id, input));
+    const result = await tasks.once(dispatchId, ['message', engine.id, session, ...dispatchContent(input)], async () => {
+      const blocked = await sendBlocked(engine, session);
+      if (blocked) throw refusal(blocked);
+      const reserve = () => { if (dispatchId) tasks.book.reserveWorkbench({ id: dispatchId, engine: engine.id, session,
+        project: input.cwd || '', prompt: input.prompt, sessionTitle: str(get(req.body, 'sessionTitle')) || '' }); };
+      if (!engine.postMessage && mode === 'steer') {
+        const steered = await runs.steer(engine.id, session, input, dispatchId);
+        if (dispatchId && steered.status === 'queued') {
+          reserve(); tasks.book.link(dispatchId, { queueItem: steered.id }); tasks.book.set(dispatchId, 'queued');
+        }
+        return steered;
+      }
+      reserve();
+      if (engine.postMessage) return nativeMessage(engine, session, input, dispatchId);
+      if (mode === 'queue') {
+        const queued = runs.enqueue(engine.id, session, input, dispatchId);
+        if (dispatchId) { tasks.book.link(dispatchId, { queueItem: queued.id }); tasks.book.set(dispatchId, 'queued'); }
+        return queued;
+      }
+      return runs.start(engine.id, session, input, { dispatchId });
+    });
+    res.status(202).json(result);
   });
   // Deliver the message the desktop is holding for the running turn right away (its Send now).
   app.post('/api/sessions/:engine/:id/send-now', async (req, res) => {
@@ -360,10 +402,14 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
     res.json(await engine.sendNow(req.params.id));
   });
   app.post('/api/sessions/:engine/:id/queue/:itemId/steer', async (req, res) => {
-    res.json(await runs.steerQueued(req.params.engine, req.params.id, String(req.params.itemId)));
+    const result = await runs.steerQueued(req.params.engine, req.params.id, String(req.params.itemId));
+    tasks.book.queuedAction(req.params.engine, req.params.id, String(req.params.itemId), true);
+    res.json(result);
   });
   app.delete('/api/sessions/:engine/:id/queue/:itemId', (req, res) => {
-    res.json(runs.dequeue(req.params.engine, req.params.id, String(req.params.itemId)));
+    const result = runs.dequeue(req.params.engine, req.params.id, String(req.params.itemId));
+    tasks.book.queuedAction(req.params.engine, req.params.id, String(req.params.itemId), false);
+    res.json(result);
   });
   // Images inside a session (screenshots in tool results, generated images), served by the engine.
   app.get('/api/sessions/:engine/:id/media/:key', async (req, res) => {
@@ -520,7 +566,7 @@ async function createApp({ config = loadConfig(), host: given, hub = new EventHu
     if (res.headersSent) return next(err);
     res.status(statusOf(err, isUploadError(err) ? 400 : 500)).json({ error: messageOf(err) || '服务异常' });
   });
-  return { app, host, hub, runs, activity, async dispose() { for (const res of streams) res.end(); closeTasks(); activity.dispose(); observer.dispose(); dictation.dispose(); runs.dispose(); await host.dispose(); } };
+  return { app, host, hub, runs, activity, async dispose() { for (const res of streams) res.end(); tasks.close(); activity.dispose(); observer.dispose(); dictation.dispose(); runs.dispose(); await host.dispose(); } };
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href) createApp().then(context => {
   const config = loadConfig();

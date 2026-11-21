@@ -8,11 +8,101 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { createApp } from '../src/server/server.js';
 import { PluginHost } from '../src/server/core/plugin-host.js';
-import { EngineEvents, UnifiedSession } from '../src/server/types.js';
+import { EngineEvents, UnifiedSession, UnifiedTurn } from '../src/server/types.js';
 import { TaskBook } from '../src/server/services/task-board.js';
 import { sendRoutine } from '../src/server/services/grok-routine.js';
 import { AntigravityBridge } from '../src/server/antigravity-bridge.js';
 import { fileURLToPath } from 'node:url';
+
+async function serve(host: PluginHost, args: Omit<Parameters<typeof createApp>[0] & object, 'host'> = {}) {
+  const app = await createApp({ ...args, host }), server = app.app.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const info = server.address();
+  assert.ok(info && typeof info === 'object');
+  const request = (path: string, body?: unknown, method = body === undefined ? 'GET' : 'POST') => fetch(`http://127.0.0.1:${info.port}/api` + path, {
+    method, ...(body === undefined ? {} : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  return { ...app, request, async close() { server.close(); await app.dispose(); } };
+}
+
+test('workbench creates and sends exactly once, tracks a new queued turn and merges inserted messages', async () => {
+  const host = new PluginHost(), sends: string[] = [], steers: string[] = [], emitters: EngineEvents[] = [];
+  let creates = 0;
+  const target = new UnifiedSession({id:'native-1',engine:'sample',title:'Native 1'});
+  host.register({ id:'sample', label:'Sample', capabilities:{ steer:true }, list: () => [target], models: () => [],
+    read: () => ({ session: target, turns: [] }), status: () => ({ connected:true }),
+    create(input) { creates++; assert.equal(input.prompt, ''); return {id:target.id}; },
+    send(_id,input) { sends.push(input.prompt); const events = new EngineEvents(); emitters.push(events); return events; },
+    steer(_id,input) { steers.push(input.prompt); return {}; },
+  });
+  const s = await serve(host), path = '/sessions/sample/native-1/messages';
+  try {
+    const create = { dispatchId:randomUUID(), prompt:'exact first prompt' };
+    assert.ok((await s.request('/sessions/sample', create)).ok);
+    assert.ok((await s.request('/sessions/sample', create)).ok);
+    assert.equal(creates,1);
+    const appended = { dispatchId:randomUUID(), prompt:'additional instructions', mode:'steer' };
+    await s.request(path, appended); await s.request(path, appended);
+    assert.deepEqual(steers,['additional instructions']);
+    const join = { dispatchId:randomUUID(), prompt:'queue then insert', mode:'queue' };
+    const q = await (await s.request(path, join)).json() as { id: string };
+    assert.ok((await s.request('/sessions/sample/native-1/queue/' + q.id + '/steer', {})).ok);
+    assert.deepEqual(steers,['additional instructions','queue then insert']);
+    const next = { dispatchId:randomUUID(), prompt:'truly independent', mode:'queue' };
+    await s.request(path,next);
+    emitters[0]!.emit('approval',{id:'approval',title:'A review'});
+    type Row = { id: string; state: string };
+    const rows = async () => await (await s.request('/tasks')).json() as Row[];
+    const before = await rows();
+    assert.equal(before.length,2);
+    assert.equal(before.find(r=>r.id === create.dispatchId)?.state,'waiting');
+    assert.equal(before.find(r=>r.id === next.dispatchId)?.state,'queued');
+    emitters[0]!.emit('completed',{reply:'first reply'});
+    for (let i=0;i<100 && sends.length<2;i++) await delay(10);
+    assert.deepEqual(sends,['exact first prompt','truly independent']);
+    emitters[1]!.emit('completed',{reply:'second reply'});
+    assert.deepEqual((await rows()).map(r=>r.state),['completed','completed']);
+  } finally { await s.close(); }
+});
+
+test('native group replies use the observed turn in the selected group, and persisted IDs prevent delivery twice', async () => {
+  const folder = mkdtempSync(join(tmpdir(),'acc-workbench-'));
+  const deliveries: string[] = [];
+  const groups = ['group-one','group-two'], markers = ['GROUP-A','GROUP-B'];
+  function agent() {
+    const host = new PluginHost();
+    host.register({id:'grok',label:'Grok Bot',capabilities:{create:false}, list: () => [], models: () => [], status: () => ({ connected:true }),
+      create: () => { throw Error('not supported'); }, send: () => { throw Error('use native post'); },
+      read: id => ({ session:new UnifiedSession({id,engine:'grok'}), turns:[new UnifiedTurn({id:'observed',userPrompt:'look up',status:'unknown',
+        messages:[{id:'reply',text:'Reply in '+id,phase:'final_answer',status:'completed'}]})] }),
+      postMessage: (id,input) => { deliveries.push(id + ':' + input.prompt); return { status:'sent', observedTurnId:'observed', sessionTitle:'Native '+id }; },
+    });
+    return host;
+  }
+  const first = await serve(agent(),{taskFile:join(folder,'tasks.sqlite')});
+  const bodies = markers.map(prompt=>({dispatchId:randomUUID(),prompt}));
+  const route = (i:number) => '/sessions/grok/'+groups[i]+'/messages';
+  try {
+    for (const [i,body] of bodies.entries()) assert.equal((await first.request(route(i),body)).status,202);
+    const one = await (await first.request('/tasks/'+bodies[0]!.dispatchId)).json() as { state:string };
+    assert.equal(one.state,'delivered');
+  } finally { await first.close(); }
+  const restarted = await serve(agent(),{taskFile:join(folder,'tasks.sqlite')});
+  try {
+    for (const [i,body] of bodies.entries()) assert.equal((await restarted.request(route(i),body)).status,202);
+    assert.deepEqual(deliveries,['group-one:GROUP-A','group-two:GROUP-B']);
+    type Row = { id:string; state:string; session_name:string; preview:string };
+    await restarted.request('/tasks');
+    await delay(20);
+    const rows = await (await restarted.request('/tasks')).json() as Row[];
+    for (const [i,body] of bodies.entries()) {
+      const task = rows.find(row=>row.id === body.dispatchId);
+      assert.equal(task?.state,'replied');
+      assert.equal(task?.preview,'Reply in ' + groups[i]);
+      assert.equal(task?.session_name,'Native ' + groups[i]);
+    }
+  } finally { await restarted.close(); rmSync(folder,{recursive:true,force:true}); }
+});
 
 test('discovered session-only plugin dispatches and reconciles two distinct replies without resending', async () => {
   const host = new PluginHost();

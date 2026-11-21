@@ -12,7 +12,7 @@ A local macOS workbench for sending tasks to your existing desktop agents and re
 
 ## Send your first task
 
-Select an Agent and an existing chat in the workbench. Send a small prompt and look for the reply in that same chat. **All Tasks** records explicit task dispatches, not every message sent from the chat composer. Grok Bot direct and group chats use its desktop app; an optional Routine is a separate way to dispatch work to the main Bot, not a requirement for chats. See [operations and Grok configuration](docs/macos.md).
+The **Overview** shows dispatches, progress, and usage for enabled agents. Open **Workbench**, choose an agent and an existing chat, and send a message. Each independent run sent from the workbench appears in the overview. In-turn notes and approvals don't create new records, and messages sent from the original apps are not imported. Select Grok's main Bot or a group directly in the workbench; no Routine is required. See [operations and troubleshooting](docs/macos.md).
 
 ## Troubleshoot or contribute
 
