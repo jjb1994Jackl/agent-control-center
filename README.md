@@ -1,25 +1,27 @@
 # Agent Control Center
 
-[简体中文](README.zh-CN.md) · [Compatibility](docs/compatibility.md) · [Add an Agent](docs/add-agent.md)
+[下载 Mac 预览版 / Download](https://github.com/jjb1994Jackl/agent-control-center/releases) · [中文使用指南](README.zh-CN.md) · [Compatibility](docs/compatibility.md) · [Add an Agent](docs/add-agent.md)
 
-A local macOS workbench for sending tasks to your existing desktop agents and reading their replies. Each agent keeps its own account, model, permissions and conversation. This preview does not install vendor apps or include model usage.
+**一个网页，统一使用 Mac 上的多个 AI Agent。** 在「工作台」选 Agent 和会话，派任务、看回复；在「总览」看派单记录、任务进展和可读取的用量。任务仍在各自的原应用里执行，沿用原账号、模型和权限，不需要额外的统一模型 API。
 
-## Install on Mac
+## Mac 快速开始
 
-1. Install [Node.js 22.16 or newer](https://nodejs.org/) with npm and Apple's command-line tools (`xcode-select --install`). Install and sign in to the agent apps you use.
-2. Download and unzip the source archive. Run `./install.sh` inside it. Choose whether the workbench and enabled agents should start after you log in to macOS. No `sudo` or Gatekeeper changes are required. An existing service on port 4100 is left untouched; use `PORT=4101 ./install.sh` if needed.
-3. Under **Add Agent (+)**, turn on the apps you want. For actions that need Accessibility, grant it to **Agent Control Center Preview** in **System Settings → Privacy & Security → Accessibility** (the app is in `~/Applications`). You do not need to grant it separately to each agent or group.
+1. 安装 [Node.js 22.16+](https://nodejs.org/) 和 Apple 命令行工具（`xcode-select --install`），并登录你要使用的 Agent 桌面应用。
+2. 在 [Releases](https://github.com/jjb1994Jackl/agent-control-center/releases) 下载 `agent-control-center-mac-preview.zip`，解压后在该目录运行 `./install.sh`。默认地址为 `http://127.0.0.1:4100`。
+3. 点击「添加 Agent（+）」启用应用；按需给 **Agent Control Center Preview** 授予 macOS 辅助功能权限。到「工作台」选择 Agent 和会话，发出第一条消息。
 
-## Send your first task
+已接入 **Codex、Antigravity、Grok Bot、Claude**，各家能力见[兼容性表](docs/compatibility.md)。Grok 主 Bot 和群组都可在工作台选择，不需要 Routine；Grok 硬停未通过真机验收。千问、千问办公、Kimi 和 WorkBuddy 目前只有接入指南。下载包以 Release 标签为准，`main` 可能包含尚未打包的改动。
 
-The **Overview** shows dispatches, progress, and usage for enabled agents. Open **Workbench**, choose an agent and an existing chat, and send a message. Each independent run sent from the workbench appears in the overview. In-turn notes and approvals don't create new records, and messages sent from the original apps are not imported. Select Grok's main Bot or a group directly in the workbench; no Routine is required. See [operations and troubleshooting](docs/macos.md).
+## English Quick Start
 
-The sidebar distinguishes native pins from browser-only pins. **Stop current task** uses the agent's own stop control; **Pause queue** only holds unsent workbench messages for that chat. A native stop control did not appear during the live Grok Bot test, so hard stop for Grok is not verified.
+Agent Control Center is a local macOS workbench for sending tasks to existing desktop agents, reading replies and checking progress and available usage. Each agent runs the task in its own app with its own account, model and permissions.
 
-## Troubleshoot or contribute
+1. Install [Node.js 22.16+](https://nodejs.org/) and the Apple command-line tools (`xcode-select --install`). Install and sign in to the agent apps you use.
+2. Download the Mac preview ZIP from [Releases](https://github.com/jjb1994Jackl/agent-control-center/releases), unzip it and run `./install.sh` in that directory.
+3. Under **Add Agent (+)**, enable the apps you use and grant macOS Accessibility to **Agent Control Center Preview** when needed. Select a chat in **Workbench** to send your first task.
 
-Run `./doctor.sh` from the source directory, or open **Agent Control Center Preview** from `~/Applications` to launch the installed workbench. The [operations guide](docs/macos.md) also covers upgrades and uninstalling after you delete the source directory.
+Adapters: **Codex, Antigravity, Grok Bot, Claude**. See the [compatibility table](docs/compatibility.md) for limits. Grok supports direct and group chats without a Routine; hard stop for Grok is not verified. Release downloads may lag behind `main`.
 
-To add another vendor, follow the [adapter guide](docs/add-agent.md). It includes a runnable example and concrete implementation checklists for [Qianwen Chat](docs/agents/qianwen.md), [QwenWork](docs/agents/qwenwork.md), [Kimi](docs/agents/kimi.md) and [WorkBuddy](docs/agents/workbuddy.md). They are **guides, not installed integrations**.
+[Mac troubleshooting](docs/macos.md) · [Build an adapter](docs/add-agent.md) · [MIT license](LICENSE)
 
-Built on [Agent Frontdesk 0.3.1](https://github.com/Phz-06/agent-frontdesk/tree/3151d8096813a01613a0fb1e71ef089f0e76a69f). This preview adds the task board, Grok Bot channels and a macOS installer. [MIT license](LICENSE). Not affiliated with the agent vendors.
+Built on [Agent Frontdesk 0.3.1](https://github.com/Phz-06/agent-frontdesk/tree/3151d8096813a01613a0fb1e71ef089f0e76a69f). Not affiliated with the agent vendors.

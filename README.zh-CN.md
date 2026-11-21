@@ -1,13 +1,13 @@
 # Agent Control Center
 
-[English](README.md) · [兼容性表](docs/compatibility.md) · [接入新 Agent](docs/add-agent.md)
+[English](README.md) · [下载 Mac 预览版](https://github.com/jjb1994Jackl/agent-control-center/releases) · [兼容性表](docs/compatibility.md) · [接入新 Agent](docs/add-agent.md)
 
 一个运行在 Mac 上的本地工作台。你选桌面 Agent 和会话，在一个网页里派任务、看回复。不换模型、不替你分工，任务仍由原应用用你的账号、模型和权限执行。工作台免费，各家服务的用量仍按自己的账号计算。
 
 ## 安装
 
 1. 安装 [Node.js 22.16 或更新版本](https://nodejs.org/)（需带 npm）和 Apple 命令行工具（终端运行 `xcode-select --install`）。要用哪家 Agent，就先装该应用并登录。
-2. 下载源码 ZIP，解压后在目录里执行 `./install.sh`，按提示选择是否登录 Mac 后启动工作台及已启用的 Agent。不需要 `sudo`，也不需要关闭 Gatekeeper。4100 端口被占用时可使用 `PORT=4101 ./install.sh`，脚本不会停掉旧服务。
+2. 在 Releases 下载 `agent-control-center-mac-preview.zip`，解压后在目录里执行 `./install.sh`。按提示选择是否登录 Mac 后启动工作台及已启用的 Agent。不需要 `sudo`，也不需要关闭 Gatekeeper。4100 端口被占用时可使用 `PORT=4101 ./install.sh`，脚本不会停掉旧服务。下载包以 Release 标签为准，`main` 可能包含尚未打包的改动。
 3. 在网页左侧点 **添加 Agent（+）**，只启用你要用的应用。用到桌面读取或点击时，在 **系统设置 → 隐私与安全性 → 辅助功能** 给 `~/Applications` 里的 **Agent Control Center Preview** 授权；不用给每家 Agent 或每个群重复授权。
 
 ## 发送第一条任务
