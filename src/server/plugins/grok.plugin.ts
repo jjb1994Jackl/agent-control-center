@@ -25,22 +25,31 @@ export const about: PluginAbout = {
 export function grokTurns(raw: unknown): UnifiedTurn[] {
   const turns: UnifiedTurn[] = [];
   const occurrence = new Map<string, number>();
-  let userAnchor = '';
+  const rows = list(raw).slice(-85);
+  const anchor = (row: unknown) => {
+    const stamp = get(row, 'stamp'), author = get(row, 'author'), body = get(row, 'text');
+    return get(row, 'user') === true && typeof stamp === 'string' && stamp.trim() && typeof body === 'string' && typeof author === 'string'
+      ? 'grok-' + hash(author + '\0' + stamp.trim() + '\0' + promptKey(body)) : '';
+  };
+  const candidates = new Map<string, number>();
+  for (const row of rows) {
+    const id = anchor(row);
+    if (id) candidates.set(id, (candidates.get(id) || 0) + 1);
+  }
   const keyOf = (author: string, text: string) => {
     const base = hash(author + '\0' + text), count = (occurrence.get(base) ?? 0) + 1;
     occurrence.set(base, count);
     return base + '-' + count;
   };
-  for (const row of list(raw).slice(-85)) {
+  for (const row of rows) {
     const author = get(row, 'author'), body = get(row, 'text');
     if (typeof author !== 'string' || typeof body !== 'string' || !body.trim()) continue;
     const key = keyOf(author, body);
     if (get(row, 'user') === true) {
-      const stamp = get(row, 'stamp');
-      // If the native viewport drops an earlier prompt, this anchor no longer matches. Do not
-      // attach a later identical prompt to an older task using a recycled occurrence number.
-      userAnchor = hash(userAnchor + '\0' + String(stamp ?? '') + '\0' + promptKey(body));
-      turns.push(new UnifiedTurn({ id: typeof stamp === 'string' && stamp ? 'grok-' + userAnchor : key, userPrompt: body, status: 'unknown', timestamp: '' }));
+      const observed = anchor(row);
+      // A visible clock label + exact text can survive a viewport change. It cannot tell two
+      // identical messages at the same displayed time apart; such turns are display-only.
+      turns.push(new UnifiedTurn({ id: candidates.get(observed) === 1 ? observed : key, userPrompt: body, status: 'unknown', timestamp: '' }));
     } else {
       let last = turns.at(-1);
       if (!last) { last = new UnifiedTurn({ id: 'before-' + key, status: 'unknown', timestamp: '' }); turns.push(last); }

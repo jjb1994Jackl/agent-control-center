@@ -94,6 +94,12 @@ export class TaskBook {
       .run(sessionTitle.trim().slice(0,240), digest(promptKey(prompt)), id);
   }
   link(id: string, { session, sessionTitle, nativeTurn, queueItem, sentAt }: { session?: string; sessionTitle?: string; nativeTurn?: string; queueItem?: string; sentAt?: string }) {
+    if (nativeTurn?.startsWith('grok-')) {
+      const task = this.get(id);
+      const other = task && this.db.prepare("SELECT id FROM tasks WHERE engine='grok' AND session=? AND native_turn=? AND id!=? LIMIT 1")
+        .get(task.session, nativeTurn, id);
+      if (other) nativeTurn = undefined;
+    }
     this.db.prepare(`UPDATE tasks SET session=coalesce(?,session), session_name=coalesce(?,session_name),
       native_turn=coalesce(?,native_turn), queue_item=coalesce(?,queue_item), sent_at=coalesce(?,sent_at) WHERE id=?`)
       .run(session ?? null, sessionTitle?.slice(0,240) || null, nativeTurn || null, queueItem ?? null, sentAt ?? null, id);
@@ -179,6 +185,8 @@ export function mountTasks(app: Express, host: PluginHost, hub: EventHub, runs: 
         if (closed) break;
         try {
           const engine = host.get(t.engine);
+          // Grok exposes a clock label, not a date. Don't match a repeated prompt on another day.
+          if (t.engine === 'grok' && t.source === 'workbench' && Date.now() - stampOf(t.created) >= 24 * 60 * 60 * 1000) continue;
           const key = hub.key(t.engine, t.session);
           let h = histories.get(key);
           if (!h) { h = presentHistory(await engine.read(t.session)); histories.set(key, h); }
