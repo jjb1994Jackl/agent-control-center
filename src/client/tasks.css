@@ -249,11 +249,11 @@ svg {
 .usage-entry:hover {
   background: var(--hover);
 }
-.usage-entry strong,
-.usage-entry span {
+.usage-entry > strong,
+.usage-entry > span {
   display: block;
 }
-.usage-entry span {
+.usage-entry > span {
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--muted);
